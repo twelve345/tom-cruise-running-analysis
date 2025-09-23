@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tom Cruise Running Time Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Slate Gray & Amber -->
+    <!-- Application Structure Plan: The SPA is designed as a top-down narrative dashboard. It starts with macro-level stats (total distance/time) to grab attention. The core is an interactive "Filmography Explorer" allowing users to sort and filter movie data, which is the primary user task. This is followed by data visualizations ("Running Through the Years" and "Run vs. Ratings") to reveal trends and correlations found in the research. The structure was chosen to guide the user from general facts to detailed exploration and finally to analytical insights, creating a logical and engaging user flow that makes the complex data easily digestible. -->
+    <!-- Visualization & Content Choices:
+        - Total Stats (Inform): Large, dynamic text for immediate impact.
+        - Filmography Explorer (Organize/Compare): Interactive HTML list. Interaction: Sort by year/distance, filter by distance category. Justification: This is the most effective way to present the core dataset, allowing users to answer their own specific questions. Method: Vanilla JS DOM manipulation.
+        - Running Through the Years (Change): Bar Chart. Interaction: Tooltips on hover. Justification: A bar chart is ideal for comparing discrete values (running distance) across a time series (movie years), clearly showing the trend of increased running over his career. Library: Chart.js.
+        - Run vs. Ratings (Relationships): Bar Chart. Interaction: Tooltips on hover. Justification: A grouped bar chart effectively compares a key metric (average Rotten Tomatoes score) across different categories (running distance tiers), making the correlation discovered by Rotten Tomatoes clear and easy to understand. Library: Chart.js.
+        - All graphics are rendered on Canvas via Chart.js, adhering to the no-SVG constraint. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+        }
+        .nav-button.active {
+            background-color: #f59e0b;
+            color: #1f2937;
+            font-weight: 600;
+        }
+        .movie-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .movie-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tighter">TomCruiseRunningTime.com</h1>
+            <p class="text-lg text-slate-400 mt-2">An Interactive Analysis of Cinema's Most Iconic Sprint</p>
+        </header>
+
+        <main>
+            <!-- Key Stats Section -->
+            <section id="stats" class="mb-12 bg-slate-800 p-6 rounded-lg shadow-lg">
+                 <p class="text-center text-slate-300 mb-6 text-lg">Across his prolific career, Tom Cruise has turned running into an art form. The data shows not only a staggering total distance covered but also a fascinating correlation between his on-screen sprints and the success of his films. This interactive dashboard explores that very phenomenon.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
+                    <div class="bg-slate-700 p-6 rounded-lg">
+                        <h3 class="text-xl font-semibold text-amber-400">Total On-Screen Distance</h3>
+                        <p class="text-5xl font-bold text-white mt-2">~36,032 ft</p>
+                        <p class="text-slate-400">(~6.82 miles)</p>
+                    </div>
+                    <div class="bg-slate-700 p-6 rounded-lg">
+                        <h3 class="text-xl font-semibold text-amber-400">Total On-Screen Run Time</h3>
+                        <p class="text-5xl font-bold text-white mt-2">~18m 50s</p>
+                        <p class="text-slate-400">(in supercuts)</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filmography Explorer Section -->
+            <section id="filmography" class="mb-12">
+                <h2 class="text-3xl font-bold text-center mb-2 text-white">Filmography Explorer</h2>
+                <p class="text-center text-slate-400 mb-6">Sort through the movies where Tom runs, or filter by the intensity of the sprint.</p>
+                <div class="flex flex-wrap justify-center gap-4 mb-8">
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-300">Sort By:</span>
+                        <button id="sort-year" class="nav-button active bg-slate-700 hover:bg-amber-500 text-white py-2 px-4 rounded-md">Year</button>
+                        <button id="sort-distance" class="nav-button bg-slate-700 hover:bg-amber-500 text-white py-2 px-4 rounded-md">Distance</button>
+                    </div>
+                     <div class="flex items-center gap-2">
+                        <span class="text-slate-300">Filter By:</span>
+                        <select id="filter-distance" class="nav-button bg-slate-700 hover:bg-amber-500 text-white py-2 px-4 rounded-md appearance-none">
+                            <option value="all">All Distances</option>
+                            <option value="full-tom">Full Tom (1001+ ft)</option>
+                            <option value="middle">Middle-Distance (501-1000 ft)</option>
+                            <option value="sprint">Short Sprint (1-500 ft)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="movie-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Movie cards will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <!-- Visualizations Section -->
+            <section id="visualizations" class="space-y-16">
+                 <div>
+                    <h2 class="text-3xl font-bold text-center mb-2 text-white">Running Through the Years</h2>
+                    <p class="text-center text-slate-400 mb-6">As Tom Cruise gets older, he runs more. This chart visualizes the running distance in his films over time, showing a clear upward trend in recent decades.</p>
+                    <div class="bg-slate-800 p-4 rounded-lg shadow-lg">
+                        <div class="chart-container">
+                            <canvas id="runningOverTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-3xl font-bold text-center mb-2 text-white">Does More Running Equal Better Movies?</h2>
+                    <p class="text-center text-slate-400 mb-6">Analysis by Rotten Tomatoes suggests a strong correlation. Films where Cruise runs over 1,000 feet have significantly higher average Tomatometer scores and box office returns. Explore the data below.</p>
+                    <div class="bg-slate-800 p-4 rounded-lg shadow-lg">
+                        <div class="chart-container" style="height: 450px; max-height: 60vh;">
+                            <canvas id="ratingsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 pt-8 border-t border-slate-700">
+            <p class="text-slate-500">Data compiled from Rotten Tomatoes, Reddit (r/theydidthemath), and various film analysis articles.</p>
+            <p class="text-slate-500">An interactive project by TomCruiseRunningTime.com</p>
+        </footer>
+    </div>
+
+    <script>
+        const movieData = [
+            { title: "Endless Love", year: 1981, distance: 43, score: 25 },
+            { title: "Taps", year: 1981, distance: 301, score: 71 },
+            { title: "The Outsiders", year: 1983, distance: 231, score: 65 },
+            { title: "Losin' It", year: 1983, distance: 102, score: 13 },
+            { title: "Risky Business", year: 1983, distance: 215, score: 92 },
+            { title: "All the Right Moves", year: 1983, distance: 298, score: 61 },
+            { title: "Legend", year: 1985, distance: 198, score: 38 },
+            { title: "Top Gun", year: 1986, distance: 211, score: 58 },
+            { title: "The Color of Money", year: 1986, distance: 0, score: 88 },
+            { title: "Cocktail", year: 1988, distance: 151, score: 9 },
+            { title: "Rain Man", year: 1988, distance: 98, score: 89 },
+            { title: "Born on the Fourth of July", year: 1989, distance: 405, score: 85 },
+            { title: "Days of Thunder", year: 1990, distance: 333, score: 38 },
+            { title: "Far and Away", year: 1992, distance: 243, score: 50 },
+            { title: "A Few Good Men", year: 1992, distance: 0, score: 84 },
+            { title: "The Firm", year: 1993, distance: 1241, score: 76 },
+            { title: "Interview with the Vampire", year: 1994, distance: 0, score: 64 },
+            { title: "Mission: Impossible", year: 1996, distance: 962, score: 66 },
+            { title: "Jerry Maguire", year: 1996, distance: 153, score: 85 },
+            { title: "Eyes Wide Shut", year: 1999, distance: 0, score: 75 },
+            { title: "Magnolia", year: 1999, distance: 0, score: 84 },
+            { title: "Mission: Impossible II", year: 2000, distance: 397, score: 56 },
+            { title: "Vanilla Sky", year: 2001, distance: 832, score: 42 },
+            { title: "Minority Report", year: 2002, distance: 1562, score: 90 },
+            { title: "The Last Samurai", year: 2003, distance: 602, score: 66 },
+            { title: "Collateral", year: 2004, distance: 887, score: 86 },
+            { title: "War of the Worlds", year: 2005, distance: 1752, score: 75 },
+            { title: "Mission: Impossible III", year: 2006, distance: 3212, score: 71 },
+            { title: "Lions for Lambs", year: 2007, distance: 0, score: 27 },
+            { title: "Tropic Thunder", year: 2008, distance: 0, score: 82 },
+            { title: "Valkyrie", year: 2008, distance: 111, score: 62 },
+            { title: "Knight and Day", year: 2010, distance: 942, score: 52 },
+            { title: "Mission: Impossible - Ghost Protocol", year: 2011, distance: 3066, score: 93 },
+            { title: "Rock of Ages", year: 2012, distance: 0, score: 42 },
+            { title: "Jack Reacher", year: 2012, distance: 411, score: 63 },
+            { title: "Oblivion", year: 2013, distance: 812, score: 54 },
+            { title: "Edge of Tomorrow", year: 2014, distance: 1065, score: 91 },
+            { title: "Mission: Impossible - Rogue Nation", year: 2015, distance: 1518, score: 94 },
+            { title: "Jack Reacher: Never Go Back", year: 2016, distance: 1051, score: 38 },
+            { title: "The Mummy", year: 2017, distance: 1022, score: 15 },
+            { title: "American Made", year: 2017, distance: 35, score: 85 },
+            { title: "Mission: Impossible - Fallout", year: 2018, distance: 2628, score: 97 },
+            { title: "Top Gun: Maverick", year: 2022, distance: 550, score: 96 },
+            { title: "Mission: Impossible - Dead Reckoning Part One", year: 2023, distance: 2131, score: 96 }
+        ];
+
+        let currentSort = 'year';
+        let currentFilter = 'all';
+
+        const movieGrid = document.getElementById('movie-grid');
+        const sortYearBtn = document.getElementById('sort-year');
+        const sortDistanceBtn = document.getElementById('sort-distance');
+        const filterDistanceSelect = document.getElementById('filter-distance');
+
+        const getCategory = (distance) => {
+            if (distance > 1000) return 'full-tom';
+            if (distance > 500) return 'middle';
+            if (distance > 0) return 'sprint';
+            return 'none';
+        }
+
+        const renderMovies = () => {
+            movieGrid.innerHTML = '';
+
+            let dataToRender = [...movieData];
+
+            if (currentFilter !== 'all') {
+                dataToRender = dataToRender.filter(movie => getCategory(movie.distance) === currentFilter);
+            }
+
+            if (currentSort === 'year') {
+                dataToRender.sort((a, b) => b.year - a.year);
+            } else if (currentSort === 'distance') {
+                dataToRender.sort((a, b) => b.distance - a.distance);
+            }
+
+            dataToRender.forEach(movie => {
+                if (movie.distance > 0) {
+                    const card = document.createElement('div');
+                    card.className = 'movie-card bg-slate-800 p-4 rounded-lg shadow-md flex flex-col justify-between';
+                    card.innerHTML = `
+                        <div>
+                            <h3 class="font-bold text-lg text-white">${movie.title}</h3>
+                            <p class="text-sm text-slate-400">${movie.year}</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-2xl font-semibold text-amber-400">${movie.distance.toLocaleString()} ft</p>
+                            <p class="text-xs text-slate-500">Tomatometer: ${movie.score}%</p>
+                        </div>
+                    `;
+                    movieGrid.appendChild(card);
+                }
+            });
+        };
+
+        sortYearBtn.addEventListener('click', () => {
+            currentSort = 'year';
+            sortYearBtn.classList.add('active');
+            sortDistanceBtn.classList.remove('active');
+            renderMovies();
+        });
+
+        sortDistanceBtn.addEventListener('click', () => {
+            currentSort = 'distance';
+            sortDistanceBtn.classList.add('active');
+            sortYearBtn.classList.remove('active');
+            renderMovies();
+        });
+
+        filterDistanceSelect.addEventListener('change', (e) => {
+            currentFilter = e.target.value;
+            renderMovies();
+        });
+
+
+        const runningOverTimeCtx = document.getElementById('runningOverTimeChart').getContext('2d');
+        const ratingsCtx = document.getElementById('ratingsChart').getContext('2d');
+
+        const runningMovies = movieData.filter(m => m.distance > 0).sort((a,b) => a.year - b.year);
+
+        const runningOverTimeChart = new Chart(runningOverTimeCtx, {
+            type: 'bar',
+            data: {
+                labels: runningMovies.map(m => m.year + ' - ' + m.title.substring(0,15) + (m.title.length > 15 ? '...' : '')),
+                datasets: [{
+                    label: 'Running Distance (feet)',
+                    data: runningMovies.map(m => m.distance),
+                    backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                    borderColor: 'rgba(251, 191, 36, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#334155' }
+                    },
+                    x: {
+                        ticks: { color: '#94a3b8', maxRotation: 90, minRotation: 70, autoSkip: true, maxTicksLimit: 20 },
+                        grid: { color: '#334155' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const movie = runningMovies[context[0].dataIndex];
+                                return `${movie.title} (${movie.year})`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const ratingData = {
+            'No Run (0 ft)': [],
+            'Short Sprint (1-500 ft)': [],
+            'Middle-Distance (501-1000 ft)': [],
+            'Full Tom (1001+ ft)': [],
+        };
+
+        movieData.forEach(movie => {
+            if (movie.distance === 0) ratingData['No Run (0 ft)'].push(movie.score);
+            else if (movie.distance <= 500) ratingData['Short Sprint (1-500 ft)'].push(movie.score);
+            else if (movie.distance <= 1000) ratingData['Middle-Distance (501-1000 ft)'].push(movie.score);
+            else ratingData['Full Tom (1001+ ft)'].push(movie.score);
+        });
+
+        const avgScores = Object.keys(ratingData).map(key => {
+            const scores = ratingData[key];
+            return scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+        });
+
+        const ratingsChart = new Chart(ratingsCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(ratingData),
+                datasets: [{
+                    label: 'Average Tomatometer Score',
+                    data: avgScores,
+                    backgroundColor: [
+                        'rgba(100, 116, 139, 0.6)',
+                        'rgba(59, 130, 246, 0.6)',
+                        'rgba(234, 179, 8, 0.6)',
+                        'rgba(245, 158, 11, 0.8)',
+                    ],
+                    borderColor: [
+                        'rgba(100, 116, 139, 1)',
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(234, 179, 8, 1)',
+                        'rgba(251, 191, 36, 1)',
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#334155' }
+                    },
+                     y: {
+                        ticks: { color: '#cbd5e1', font: {size: 14} },
+                        grid: { display: false }
+                    }
+                },
+                 plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                         callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.x !== null) {
+                                    label += context.parsed.x.toFixed(1) + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', renderMovies);
+    </script>
+</body>
+</html>
