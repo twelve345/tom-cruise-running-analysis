@@ -1,5 +1,5 @@
 const pool = require('../db/postgres');
-const { getMongoDB } = require('../db/mongodb');
+// const { getMongoDB } = require('../db/mongodb'); // TODO: Will be used for future MongoDB operations
 
 const resolvers = {
   // ============================================
