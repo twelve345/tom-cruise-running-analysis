@@ -170,17 +170,30 @@ If you find a bug or have a feature request:
 ```
 tom-cruise-running-analysis/
 ├── backend/              # Node.js + GraphQL API
-│   ├── index.js         # Entry point
-│   ├── schema/          # GraphQL schemas
-│   ├── resolvers/       # GraphQL resolvers
-│   └── scripts/         # Database scripts
+│   ├── db/              # Database connections
+│   │   ├── mongodb.js   # MongoDB connection
+│   │   └── postgres.js  # PostgreSQL connection
+│   ├── graphql/         # GraphQL API layer
+│   │   ├── schema.js    # GraphQL schema definitions
+│   │   └── resolvers.js # GraphQL resolvers
+│   ├── scripts/         # Database initialization
+│   │   ├── initDb.js    # Initialize databases
+│   │   └── seedDb.js    # Seed sample data
+│   ├── index.js         # Backend entry point
+│   ├── package.json     # Backend dependencies
+│   └── Dockerfile       # Backend container config
 ├── frontend/            # React + Vite application
 │   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/       # Page components
-│   │   └── utils/       # Utility functions
-│   └── public/          # Static assets
-├── .husky/              # Git hooks
+│   │   ├── App.tsx      # Main React component
+│   │   └── main.tsx     # React entry point
+│   ├── public/          # Static assets
+│   ├── index.html       # HTML entry point
+│   ├── vite.config.ts   # Vite configuration
+│   ├── package.json     # Frontend dependencies
+│   └── Dockerfile       # Frontend container config
+├── .husky/              # Git hooks (Husky)
+├── .github/             # GitHub assets
+├── docker-compose.yml   # Docker orchestration
 ├── package.json         # Root workspace config
 └── CONTRIBUTING.md      # This file
 ```
