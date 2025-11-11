@@ -72,7 +72,7 @@ The server will start on `http://localhost:4000`
 ## API Endpoints
 
 - **GraphQL Endpoint**: `http://localhost:4000/graphql`
-- **GraphiQL UI** (dev only): `http://localhost:4000/graphql`
+- **GraphiQL UI** (dev only): `http://localhost:4000/graphiql`
 - **Health Check**: `http://localhost:4000/health`
 
 ## GraphQL Schema

@@ -36,7 +36,7 @@ app.get('/health', async (req, res) => {
 });
 
 // GraphiQL - Interactive UI for development
-app.get('/graphql', (req, res) => {
+app.get('/graphiql', (req, res) => {
   // Only serve GraphiQL in development
   if (process.env.NODE_ENV === 'production') {
     return res.status(404).json({ error: 'GraphiQL is disabled in production' });
@@ -97,7 +97,7 @@ app.get('/', (req, res) => {
     endpoints: {
       graphql: '/graphql',
       health: '/health',
-      graphiql: process.env.NODE_ENV !== 'production' ? '/graphql' : 'disabled',
+      graphiql: process.env.NODE_ENV !== 'production' ? '/graphiql' : 'disabled',
     },
   });
 });

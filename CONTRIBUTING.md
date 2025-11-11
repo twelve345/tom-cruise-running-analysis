@@ -42,12 +42,12 @@ Once the application is running, you can access it at:
 
 **With Docker Compose:**
 - **Frontend (React App)**: http://localhost:3000
-- **Backend GraphQL API (GraphiQL)**: http://localhost:4000/graphql
+- **Backend GraphQL API (GraphiQL)**: http://localhost:4000/graphiql
 - **Health Check**: http://localhost:4000/health
 
 **Without Docker (Manual Setup):**
 - **Frontend (React App)**: http://localhost:5173
-- **Backend GraphQL API (GraphiQL)**: http://localhost:4000/graphql
+- **Backend GraphQL API (GraphiQL)**: http://localhost:4000/graphiql
 - **Health Check**: http://localhost:4000/health
 
 ### Option A: Using Docker Compose (Recommended)
