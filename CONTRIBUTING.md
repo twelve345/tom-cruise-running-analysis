@@ -40,8 +40,14 @@ npm run dev
 
 Once the application is running, you can access it at:
 
+**With Docker Compose:**
 - **Frontend (React App)**: http://localhost:3000
-- **Backend GraphQL API**: http://localhost:4000/graphql
+- **Backend GraphQL API (GraphiQL)**: http://localhost:4000/graphql
+- **Health Check**: http://localhost:4000/health
+
+**Without Docker (Manual Setup):**
+- **Frontend (React App)**: http://localhost:5173
+- **Backend GraphQL API (GraphiQL)**: http://localhost:4000/graphql
 - **Health Check**: http://localhost:4000/health
 
 ### Option A: Using Docker Compose (Recommended)
@@ -78,7 +84,7 @@ docker-compose restart backend
 
 **Docker Services:**
 - `tomcruise_frontend` - React app (port 3000)
-- `tomcruise_backend` - GraphQL API (port 4000)
+- `tomcruise_backend` - GraphQL API with GraphiQL (port 4000)
 - `tomcruise_postgres` - PostgreSQL database (port 5433)
 - `tomcruise_mongo` - MongoDB (port 27017)
 
