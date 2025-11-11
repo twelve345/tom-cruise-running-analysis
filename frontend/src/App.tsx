@@ -3,7 +3,7 @@ function App() {
     <div>
       <h1>Tom Cruise Running Time</h1>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -24,30 +24,70 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         postgres: 'connected',
-        server: 'running'
-      }
+        server: 'running',
+      },
     });
   } catch (error) {
     res.status(500).json({
       status: 'unhealthy',
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GraphQL endpoint
-app.all('/graphql', createHandler({
-  schema: schema,
-  rootValue: resolvers,
-  formatError: (error) => {
-    console.error('GraphQL Error:', error);
-    return {
-      message: error.message,
-      locations: error.locations,
-      path: error.path,
-    };
+// GraphiQL - Interactive UI for development
+app.get('/graphiql', (req, res) => {
+  // Only serve GraphiQL in development
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'GraphiQL is disabled in production' });
   }
-}));
+
+  // Serve GraphiQL HTML
+  res.type('html');
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphiQL - Tom Cruise Running Analysis</title>
+  <style>
+    body { margin: 0; height: 100vh; overflow: hidden; }
+    #graphiql { height: 100vh; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/graphiql@3/graphiql.min.css" />
+</head>
+<body>
+  <div id="graphiql">Loading GraphiQL...</div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/graphiql@3/graphiql.min.js"></script>
+  <script>
+    const root = ReactDOM.createRoot(document.getElementById('graphiql'));
+    const fetcher = GraphiQL.createFetcher({ url: '/graphql' });
+    root.render(React.createElement(GraphiQL, { fetcher: fetcher }));
+  </script>
+</body>
+</html>
+  `);
+});
+
+// GraphQL endpoint - Handles actual GraphQL queries
+app.all(
+  '/graphql',
+  createHandler({
+    schema: schema,
+    rootValue: resolvers,
+    formatError: (error) => {
+      console.error('GraphQL Error:', error);
+      return {
+        message: error.message,
+        locations: error.locations,
+        path: error.path,
+      };
+    },
+  })
+);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -57,8 +97,8 @@ app.get('/', (req, res) => {
     endpoints: {
       graphql: '/graphql',
       health: '/health',
-      graphiql: process.env.NODE_ENV !== 'production' ? '/graphql' : 'disabled'
-    }
+      graphiql: process.env.NODE_ENV !== 'production' ? '/graphiql' : 'disabled',
+    },
   });
 });
 
@@ -68,11 +108,11 @@ app.use((req, res) => {
 });
 
 // Error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('Server Error:', err);
   res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV !== 'production' ? err.message : undefined
+    message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
   });
 });
 
@@ -104,7 +144,6 @@ async function startServer() {
       console.log(`💚 Health check: http://localhost:${PORT}/health`);
       console.log('════════════════════════════════════════════════════\n');
     });
-
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

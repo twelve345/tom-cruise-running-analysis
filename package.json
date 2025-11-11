@@ -18,11 +18,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@secretlint/secretlint-rule-preset-recommend": "^8.3.2",
+    "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
     "prettier": "^3.4.2",
-    "eslint-config-prettier": "^9.1.0",
-    "@secretlint/secretlint-rule-preset-recommend": "^8.3.2",
     "secretlint": "^8.3.2"
   },
   "engines": {
