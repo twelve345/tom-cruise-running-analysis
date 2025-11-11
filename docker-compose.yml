@@ -1,0 +1,56 @@
+# docker-compose.yml
+
+services:
+  # Backend Node.js Service
+  backend:
+    build:
+      context: ./backend # Looks for a Dockerfile in the 'backend' folder
+    container_name: tomcruise_backend
+    ports:
+      - "4000:4000" # Exposes port 4000 for your GraphQL API
+    volumes:
+      - ./backend:/app # Mounts your local backend code into the container for live-reloading
+      - /app/node_modules # A trick to avoid local node_modules overwriting container's
+    depends_on:
+      - postgres
+      - mongo
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/mydatabase
+      - MONGO_URL=mongodb://mongo:27017/mydatabase
+      - PORT=4000
+
+  # Frontend React Service
+  frontend:
+    build:
+      context: ./frontend # Looks for a Dockerfile in the 'frontend' folder
+    container_name: tomcruise_frontend
+    ports:
+      - "3000:5173" # Map host port 3000 to Vite's default port 5173
+    volumes:
+      - ./frontend/src:/app/src # Mounts only the 'src' folder for live-reloading
+
+  # PostgreSQL Database Service
+  postgres:
+    image: "postgres:14-alpine" # Uses an official pre-built PostgreSQL image
+    container_name: tomcruise_postgres
+    ports:
+      - "5433:5432"  # Map to host port 5433 to avoid conflicts
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persists database data on your host machine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=mydatabase
+
+  # MongoDB Database Service
+  mongo:
+    image: "mongo:5.0" # Uses an official pre-built MongoDB image
+    container_name: tomcruise_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db # Persists database data
+
+volumes:
+  postgres_data:
+  mongo_data:
