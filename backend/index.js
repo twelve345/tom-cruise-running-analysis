@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const { createHandler } = require('graphql-http/lib/use/express');
-const expressPlayground = require('graphql-playground-middleware-express').default;
 const cors = require('cors');
 const schema = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
@@ -36,8 +35,42 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// GraphQL Playground - Interactive UI for development
-app.get('/graphql', expressPlayground({ endpoint: '/graphql' }));
+// GraphiQL - Interactive UI for development
+app.get('/graphql', (req, res) => {
+  // Only serve GraphiQL in development
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'GraphiQL is disabled in production' });
+  }
+
+  // Serve GraphiQL HTML
+  res.type('html');
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphiQL - Tom Cruise Running Analysis</title>
+  <style>
+    body { margin: 0; height: 100vh; overflow: hidden; }
+    #graphiql { height: 100vh; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/graphiql@3/graphiql.min.css" />
+</head>
+<body>
+  <div id="graphiql">Loading GraphiQL...</div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/graphiql@3/graphiql.min.js"></script>
+  <script>
+    const root = ReactDOM.createRoot(document.getElementById('graphiql'));
+    const fetcher = GraphiQL.createFetcher({ url: '/graphql' });
+    root.render(React.createElement(GraphiQL, { fetcher: fetcher }));
+  </script>
+</body>
+</html>
+  `);
+});
 
 // GraphQL endpoint - Handles actual GraphQL queries
 app.all(

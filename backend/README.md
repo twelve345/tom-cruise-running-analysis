@@ -5,7 +5,7 @@ GraphQL API for the Tom Cruise Running Analysis platform.
 ## Tech Stack
 
 - **Node.js** with Express
-- **GraphQL** with express-graphql
+- **GraphQL** with graphql-http
 - **PostgreSQL** for structured data (films, running instances, users)
 - **MongoDB** for flexible data (future features like user dashboards)
 
@@ -26,6 +26,7 @@ npm install
 ### Environment Setup
 
 1. Copy the example environment file:
+
 ```bash
 cp .env.example .env
 ```
@@ -35,16 +36,19 @@ cp .env.example .env
 ### Database Setup
 
 Initialize the database tables:
+
 ```bash
 npm run db:init
 ```
 
 Seed with sample data:
+
 ```bash
 npm run db:seed
 ```
 
 Or do both at once:
+
 ```bash
 npm run db:setup
 ```
@@ -52,11 +56,13 @@ npm run db:setup
 ### Running the Server
 
 Development mode (with hot reload):
+
 ```bash
 npm run dev
 ```
 
 Production mode:
+
 ```bash
 npm start
 ```
@@ -82,6 +88,7 @@ The server will start on `http://localhost:4000`
 ### Sample Queries
 
 **Get all films:**
+
 ```graphql
 query {
   films {
@@ -95,6 +102,7 @@ query {
 ```
 
 **Get a specific film with running instances:**
+
 ```graphql
 query {
   film(id: "1") {
@@ -112,6 +120,7 @@ query {
 ```
 
 **Get career statistics:**
+
 ```graphql
 query {
   filmStats {
@@ -124,6 +133,7 @@ query {
 ```
 
 **Get top running films:**
+
 ```graphql
 query {
   topRunningFilms(limit: 5) {
@@ -137,14 +147,10 @@ query {
 ### Sample Mutations
 
 **Create a new film:**
+
 ```graphql
 mutation {
-  createFilm(
-    title: "Top Gun: Maverick"
-    year: 2022
-    runtimeMinutes: 131
-    rottenTomatoesScore: 96
-  ) {
+  createFilm(title: "Top Gun: Maverick", year: 2022, runtimeMinutes: 131, rottenTomatoesScore: 96) {
     id
     title
     cpiScore
@@ -153,6 +159,7 @@ mutation {
 ```
 
 **Add a running instance:**
+
 ```graphql
 mutation {
   createRunningInstance(
