@@ -4,6 +4,7 @@
 const js = require('@eslint/js');
 const globals = require('globals');
 const tseslint = require('typescript-eslint');
+const prettier = require('eslint-config-prettier');
 
 module.exports = [
   // Global ignores
@@ -50,4 +51,7 @@ module.exports = [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   }),
+
+  // Prettier integration - disables conflicting rules
+  prettier,
 ];
