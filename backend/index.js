@@ -11,10 +11,6 @@ const pool = require('./db/postgres');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Intentional errors for testing pre-commit hooks
-const unusedVariable = 'This will trigger ESLint warning';
-const badlyFormattedObject = { foo: 'bar', baz: 123, test: true }; // Bad formatting for Prettier
-
 // Middleware
 app.use(cors());
 app.use(express.json());
