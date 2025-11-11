@@ -34,6 +34,98 @@ npm run db:setup --workspace=backend
 npm run dev
 ```
 
+## 🌐 Running the Application Locally
+
+### Quick Access
+
+Once the application is running, you can access it at:
+
+- **Frontend (React App)**: http://localhost:3000
+- **Backend GraphQL API**: http://localhost:4000/graphql
+- **Health Check**: http://localhost:4000/health
+
+### Option A: Using Docker Compose (Recommended)
+
+Docker Compose runs the entire stack including databases. This is the easiest way to get started.
+
+**Start the application:**
+```bash
+docker-compose up
+```
+
+**Run in detached mode (background):**
+```bash
+docker-compose up -d
+```
+
+**View logs:**
+```bash
+docker-compose logs -f              # All services
+docker-compose logs -f frontend     # Frontend only
+docker-compose logs -f backend      # Backend only
+```
+
+**Stop the application:**
+```bash
+docker-compose down
+```
+
+**Restart a specific service:**
+```bash
+docker-compose restart frontend
+docker-compose restart backend
+```
+
+**Docker Services:**
+- `tomcruise_frontend` - React app (port 3000)
+- `tomcruise_backend` - GraphQL API (port 4000)
+- `tomcruise_postgres` - PostgreSQL database (port 5433)
+- `tomcruise_mongo` - MongoDB (port 27017)
+
+### Option B: Manual Setup (Without Docker)
+
+If you prefer to run the services manually without Docker, you'll need to have PostgreSQL and MongoDB running separately.
+
+**1. Start Backend:**
+```bash
+cd backend
+npm run dev
+```
+Backend will be available at http://localhost:4000
+
+**2. Start Frontend (in another terminal):**
+```bash
+cd frontend
+npm run dev
+```
+Frontend will be available at http://localhost:5173
+
+**3. Or use the root workspace script:**
+```bash
+npm run dev    # Runs both backend and frontend concurrently
+```
+
+**Note:** When running manually, the frontend runs on port **5173** instead of 3000.
+
+### Database Connection Details
+
+**PostgreSQL (Docker):**
+- Host: `localhost`
+- Port: `5433`
+- Database: `mydatabase`
+- User: `user`
+- Password: `password`
+
+**MongoDB (Docker):**
+- Connection String: `mongodb://localhost:27017/mydatabase`
+- Port: `27017`
+
+### Hot Reloading
+
+Both frontend and backend support hot reloading:
+- **Frontend**: Vite HMR automatically refreshes your browser when you edit files in `frontend/src/`
+- **Backend**: Nodemon automatically restarts the server when you edit files in `backend/`
+
 ### Available Scripts
 
 **Root level:**

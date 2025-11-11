@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { createHandler } = require('graphql-http/lib/use/express');
+const expressPlayground = require('graphql-playground-middleware-express').default;
 const cors = require('cors');
 const schema = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
@@ -24,30 +25,36 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         postgres: 'connected',
-        server: 'running'
-      }
+        server: 'running',
+      },
     });
   } catch (error) {
     res.status(500).json({
       status: 'unhealthy',
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GraphQL endpoint
-app.all('/graphql', createHandler({
-  schema: schema,
-  rootValue: resolvers,
-  formatError: (error) => {
-    console.error('GraphQL Error:', error);
-    return {
-      message: error.message,
-      locations: error.locations,
-      path: error.path,
-    };
-  }
-}));
+// GraphQL Playground - Interactive UI for development
+app.get('/graphql', expressPlayground({ endpoint: '/graphql' }));
+
+// GraphQL endpoint - Handles actual GraphQL queries
+app.all(
+  '/graphql',
+  createHandler({
+    schema: schema,
+    rootValue: resolvers,
+    formatError: (error) => {
+      console.error('GraphQL Error:', error);
+      return {
+        message: error.message,
+        locations: error.locations,
+        path: error.path,
+      };
+    },
+  })
+);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -57,8 +64,8 @@ app.get('/', (req, res) => {
     endpoints: {
       graphql: '/graphql',
       health: '/health',
-      graphiql: process.env.NODE_ENV !== 'production' ? '/graphql' : 'disabled'
-    }
+      graphiql: process.env.NODE_ENV !== 'production' ? '/graphql' : 'disabled',
+    },
   });
 });
 
@@ -68,11 +75,11 @@ app.use((req, res) => {
 });
 
 // Error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('Server Error:', err);
   res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV !== 'production' ? err.message : undefined
+    message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
   });
 });
 
@@ -104,7 +111,6 @@ async function startServer() {
       console.log(`💚 Health check: http://localhost:${PORT}/health`);
       console.log('════════════════════════════════════════════════════\n');
     });
-
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
