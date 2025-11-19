@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import App from './App';
 
 describe('App', () => {
-  it('should pass a basic smoke test', () => {
-    expect(true).toBe(true);
+  it('should import without errors', () => {
+    expect(App).toBeDefined();
   });
 });

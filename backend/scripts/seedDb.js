@@ -1,208 +1,104 @@
 require('dotenv').config();
 const pool = require('../db/postgres');
 
-// Sample data based on Tom Cruise's filmography
-const sampleFilms = [
-  {
-    title: "Top Gun: Maverick",
-    year: 2022,
-    runtime: 131,
-    rt_score: 96,
-    imdb_id: "tt1745960"
-  },
-  {
-    title: "Mission: Impossible - Fallout",
-    year: 2018,
-    runtime: 147,
-    rt_score: 97,
-    imdb_id: "tt4912910"
-  },
-  {
-    title: "Mission: Impossible - Rogue Nation",
-    year: 2015,
-    runtime: 131,
-    rt_score: 93,
-    imdb_id: "tt2381249"
-  },
-  {
-    title: "Edge of Tomorrow",
-    year: 2014,
-    runtime: 113,
-    rt_score: 91,
-    imdb_id: "tt1631867"
-  },
-  {
-    title: "Mission: Impossible - Ghost Protocol",
-    year: 2011,
-    runtime: 133,
-    rt_score: 93,
-    imdb_id: "tt1229238"
-  },
-  {
-    title: "Knight and Day",
-    year: 2010,
-    runtime: 109,
-    rt_score: 52,
-    imdb_id: "tt1013743"
-  },
-  {
-    title: "Valkyrie",
-    year: 2008,
-    runtime: 121,
-    rt_score: 62,
-    imdb_id: "tt0985699"
-  },
-  {
-    title: "Mission: Impossible III",
-    year: 2006,
-    runtime: 126,
-    rt_score: 70,
-    imdb_id: "tt0317919"
-  },
-  {
-    title: "War of the Worlds",
-    year: 2005,
-    runtime: 116,
-    rt_score: 75,
-    imdb_id: "tt0407304"
-  },
-  {
-    title: "Collateral",
-    year: 2004,
-    runtime: 120,
-    rt_score: 86,
-    imdb_id: "tt0369339"
-  },
-  {
-    title: "The Last Samurai",
-    year: 2003,
-    runtime: 154,
-    rt_score: 66,
-    imdb_id: "tt0325710"
-  },
-  {
-    title: "Minority Report",
-    year: 2002,
-    runtime: 145,
-    rt_score: 90,
-    imdb_id: "tt0181689"
-  },
-  {
-    title: "Vanilla Sky",
-    year: 2001,
-    runtime: 136,
-    rt_score: 42,
-    imdb_id: "tt0259711"
-  },
-  {
-    title: "Mission: Impossible II",
-    year: 2000,
-    runtime: 123,
-    rt_score: 57,
-    imdb_id: "tt0120755"
-  },
-  {
-    title: "Mission: Impossible",
-    year: 1996,
-    runtime: 110,
-    rt_score: 63,
-    imdb_id: "tt0117060"
-  },
-  {
-    title: "The Firm",
-    year: 1993,
-    runtime: 154,
-    rt_score: 76,
-    imdb_id: "tt0106918"
-  },
-  {
-    title: "A Few Good Men",
-    year: 1992,
-    runtime: 138,
-    rt_score: 83,
-    imdb_id: "tt0104257"
-  },
-  {
-    title: "Top Gun",
-    year: 1986,
-    runtime: 110,
-    rt_score: 58,
-    imdb_id: "tt0092099"
-  },
-  {
-    title: "Risky Business",
-    year: 1983,
-    runtime: 99,
-    rt_score: 92,
-    imdb_id: "tt0086200"
-  }
-];
-
-// Sample running instances for a few films
-const sampleRunningInstances = [
-  // Mission: Impossible - Fallout (extensive running)
-  { filmTitle: "Mission: Impossible - Fallout", sequence: 1, distance: 1200, duration: 45.5, timestamp: "00:12:30", context: "Chasing antagonist through Paris streets", intensity: "sprint", location: "Paris, outdoor" },
-  { filmTitle: "Mission: Impossible - Fallout", sequence: 2, distance: 850, duration: 32.0, context: "Rooftop chase sequence", intensity: "sprint", location: "London, outdoor" },
-  { filmTitle: "Mission: Impossible - Fallout", sequence: 3, distance: 650, duration: 28.5, context: "Running from explosion", intensity: "sprint", location: "Kashmir, outdoor" },
-
-  // Edge of Tomorrow (time loop running)
-  { filmTitle: "Edge of Tomorrow", sequence: 1, distance: 400, duration: 18.0, context: "Training montage run", intensity: "jog", location: "Military base, outdoor" },
-  { filmTitle: "Edge of Tomorrow", sequence: 2, distance: 920, duration: 38.0, context: "Beach invasion sprint", intensity: "sprint", location: "Beach, outdoor" },
-
-  // Minority Report (futuristic chase)
-  { filmTitle: "Minority Report", sequence: 1, distance: 1100, duration: 42.0, context: "Running from PreCrime in mall", intensity: "sprint", location: "Shopping mall, indoor" },
-  { filmTitle: "Minority Report", sequence: 2, distance: 780, duration: 35.5, context: "Factory escape sequence", intensity: "sprint", location: "Factory, indoor" },
-
-  // Top Gun: Maverick
-  { filmTitle: "Top Gun: Maverick", sequence: 1, distance: 520, duration: 22.0, context: "Running to aircraft", intensity: "jog", location: "Naval base, outdoor" },
-
-  // Mission: Impossible
-  { filmTitle: "Mission: Impossible", sequence: 1, distance: 890, duration: 36.0, context: "CIA headquarters escape", intensity: "sprint", location: "Langley, indoor/outdoor" },
-
-  // War of the Worlds
-  { filmTitle: "War of the Worlds", sequence: 1, distance: 730, duration: 30.0, context: "Fleeing from alien attack", intensity: "sprint", location: "City street, outdoor" },
-
-  // The Firm
-  { filmTitle: "The Firm", sequence: 1, distance: 650, duration: 28.0, context: "Running from assassins", intensity: "sprint", location: "Memphis streets, outdoor" }
+// Data from tomcruiserunnningtime.html
+const movieData = [
+  { title: 'Endless Love', year: 1981, distance: 43, score: 25 },
+  { title: 'Taps', year: 1981, distance: 301, score: 71 },
+  { title: 'The Outsiders', year: 1983, distance: 231, score: 65 },
+  { title: "Losin' It", year: 1983, distance: 102, score: 13 },
+  { title: 'Risky Business', year: 1983, distance: 215, score: 92 },
+  { title: 'All the Right Moves', year: 1983, distance: 298, score: 61 },
+  { title: 'Legend', year: 1985, distance: 198, score: 38 },
+  { title: 'Top Gun', year: 1986, distance: 211, score: 58 },
+  { title: 'The Color of Money', year: 1986, distance: 0, score: 88 },
+  { title: 'Cocktail', year: 1988, distance: 151, score: 9 },
+  { title: 'Rain Man', year: 1988, distance: 98, score: 89 },
+  { title: 'Born on the Fourth of July', year: 1989, distance: 405, score: 85 },
+  { title: 'Days of Thunder', year: 1990, distance: 333, score: 38 },
+  { title: 'Far and Away', year: 1992, distance: 243, score: 50 },
+  { title: 'A Few Good Men', year: 1992, distance: 0, score: 84 },
+  { title: 'The Firm', year: 1993, distance: 1241, score: 76 },
+  { title: 'Interview with the Vampire', year: 1994, distance: 0, score: 64 },
+  { title: 'Mission: Impossible', year: 1996, distance: 962, score: 66 },
+  { title: 'Jerry Maguire', year: 1996, distance: 153, score: 85 },
+  { title: 'Eyes Wide Shut', year: 1999, distance: 0, score: 75 },
+  { title: 'Magnolia', year: 1999, distance: 0, score: 84 },
+  { title: 'Mission: Impossible II', year: 2000, distance: 397, score: 56 },
+  { title: 'Vanilla Sky', year: 2001, distance: 832, score: 42 },
+  { title: 'Minority Report', year: 2002, distance: 1562, score: 90 },
+  { title: 'The Last Samurai', year: 2003, distance: 602, score: 66 },
+  { title: 'Collateral', year: 2004, distance: 887, score: 86 },
+  { title: 'War of the Worlds', year: 2005, distance: 1752, score: 75 },
+  { title: 'Mission: Impossible III', year: 2006, distance: 3212, score: 71 },
+  { title: 'Lions for Lambs', year: 2007, distance: 0, score: 27 },
+  { title: 'Tropic Thunder', year: 2008, distance: 0, score: 82 },
+  { title: 'Valkyrie', year: 2008, distance: 111, score: 62 },
+  { title: 'Knight and Day', year: 2010, distance: 942, score: 52 },
+  { title: 'Mission: Impossible - Ghost Protocol', year: 2011, distance: 3066, score: 93 },
+  { title: 'Rock of Ages', year: 2012, distance: 0, score: 42 },
+  { title: 'Jack Reacher', year: 2012, distance: 411, score: 63 },
+  { title: 'Oblivion', year: 2013, distance: 812, score: 54 },
+  { title: 'Edge of Tomorrow', year: 2014, distance: 1065, score: 91 },
+  { title: 'Mission: Impossible - Rogue Nation', year: 2015, distance: 1518, score: 94 },
+  { title: 'Jack Reacher: Never Go Back', year: 2016, distance: 1051, score: 38 },
+  { title: 'The Mummy', year: 2017, distance: 1022, score: 15 },
+  { title: 'American Made', year: 2017, distance: 35, score: 85 },
+  { title: 'Mission: Impossible - Fallout', year: 2018, distance: 2628, score: 97 },
+  { title: 'Top Gun: Maverick', year: 2022, distance: 550, score: 96 },
+  { title: 'Mission: Impossible - Dead Reckoning Part One', year: 2023, distance: 2131, score: 96 },
 ];
 
 async function seedDatabase() {
   const client = await pool.connect();
 
   try {
-    console.log('🌱 Seeding database with sample data...\n');
+    console.log('🌱 Seeding database with full filmography...\n');
 
     await client.query('BEGIN');
 
-    // Insert films
-    console.log('📽️  Inserting films...');
-    const filmIdMap = {};
+    // Clear existing data
+    console.log('🧹 Clearing existing data...');
+    await client.query('TRUNCATE TABLE running_instances, films RESTART IDENTITY CASCADE');
 
-    for (const film of sampleFilms) {
-      const result = await client.query(
-        `INSERT INTO films (title, year, runtime_minutes, rotten_tomatoes_score, imdb_id)
-         VALUES ($1, $2, $3, $4, $5)
+    // Insert films and running instances
+    console.log('📽️  Inserting films and running data...');
+
+    for (const movie of movieData) {
+      // Insert Film
+      // Note: We are using default runtime (120) since we don't have it in the HTML data for all films
+      // In a real app, we would fetch this from an API (OMDB/TMDB)
+      const filmResult = await client.query(
+        `INSERT INTO films (title, year, runtime_minutes, rotten_tomatoes_score)
+         VALUES ($1, $2, $3, $4)
          RETURNING id`,
-        [film.title, film.year, film.runtime, film.rt_score, film.imdb_id]
+        [movie.title, movie.year, 120, movie.score]
       );
-      filmIdMap[film.title] = result.rows[0].id;
-    }
-    console.log(`   ✓ Inserted ${sampleFilms.length} films\n`);
+      const filmId = filmResult.rows[0].id;
 
-    // Insert running instances
-    console.log('🏃 Inserting running instances...');
-    for (const run of sampleRunningInstances) {
-      const filmId = filmIdMap[run.filmTitle];
-      if (filmId) {
+      // Insert Running Instance (if distance > 0)
+      if (movie.distance > 0) {
+        // Estimate duration: assume average running speed of ~6 mph (880 ft/min or ~14.7 ft/sec)
+        // This gives us realistic durations that sum to approximately the original HTML total
+        const estimatedDuration = movie.distance / 14.7;
+
         await client.query(
           `INSERT INTO running_instances
-           (film_id, sequence_number, distance_feet, duration_seconds, timestamp_start, context, intensity, location)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [filmId, run.sequence, run.distance, run.duration, run.timestamp, run.context, run.intensity, run.location]
+           (film_id, sequence_number, distance_feet, duration_seconds, context, intensity, location)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            filmId,
+            1,
+            movie.distance,
+            estimatedDuration,
+            'Total run distance from analysis',
+            'various',
+            'various',
+          ]
         );
       }
     }
-    console.log(`   ✓ Inserted ${sampleRunningInstances.length} running instances\n`);
+    console.log(`   ✓ Inserted ${movieData.length} films\n`);
 
     await client.query('COMMIT');
 
@@ -219,14 +115,15 @@ async function seedDatabase() {
     console.log('📊 Database seeded successfully!');
     console.log('   ═══════════════════════════════════════');
     console.log(`   Total Films: ${stats.film_count}`);
-    console.log(`   Total Running Distance: ${stats.total_distance} feet (${(stats.total_distance / 5280).toFixed(2)} miles)`);
+    console.log(
+      `   Total Running Distance: ${stats.total_distance} feet (${(stats.total_distance / 5280).toFixed(2)} miles)`
+    );
     console.log(`   Total Running Instances: ${stats.total_instances}`);
     console.log('   ═══════════════════════════════════════\n');
 
     client.release();
     await pool.end();
     process.exit(0);
-
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Error seeding database:', error);

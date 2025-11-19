@@ -98,6 +98,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS running_instance_stats_trigger ON running_instances;
+
 CREATE TRIGGER running_instance_stats_trigger
 AFTER INSERT OR UPDATE OR DELETE ON running_instances
 FOR EACH ROW

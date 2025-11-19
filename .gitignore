@@ -139,7 +139,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Claude Code workbench and configuration
-.claude/
+# .claude/
 
 # Documentation not ready for publishing
 CONTRIBUTING.md
+
+
