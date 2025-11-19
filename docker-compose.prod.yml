@@ -1,15 +1,13 @@
-# docker-compose.yml
+# docker-compose.prod.yml
 services:
   # Backend Node.js Service
   backend:
     build:
       context: ./backend
-    container_name: tomcruise_backend
+    container_name: tomcruise_backend_prod
+    restart: always
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
     depends_on:
       - postgres
       - mongo
@@ -17,30 +15,27 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - MONGO_URL=${MONGO_URL}
       - PORT=${PORT:-4000}
-      - NODE_ENV=${NODE_ENV:-development}
+      - NODE_ENV=production
 
-  # Frontend React Service
+  # Frontend React Service (Nginx)
   frontend:
     build:
       context: ./frontend
-      target: development
-    container_name: tomcruise_frontend
+      target: production
+    container_name: tomcruise_frontend_prod
+    restart: always
     ports:
-      - "3000:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
+      - "80:80"
+    depends_on:
+      - backend
 
   # PostgreSQL Database Service
   postgres:
     image: "postgres:14-alpine"
-    container_name: tomcruise_postgres
-    ports:
-      - "5433:5432"
+    container_name: tomcruise_postgres_prod
+    restart: always
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_prod:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -49,12 +44,11 @@ services:
   # MongoDB Database Service
   mongo:
     image: "mongo:5.0"
-    container_name: tomcruise_mongo
-    ports:
-      - "27017:27017"
+    container_name: tomcruise_mongo_prod
+    restart: always
     volumes:
-      - mongo_data:/data/db
+      - mongo_data_prod:/data/db
 
 volumes:
-  postgres_data:
-  mongo_data:
+  postgres_data_prod:
+  mongo_data_prod:
