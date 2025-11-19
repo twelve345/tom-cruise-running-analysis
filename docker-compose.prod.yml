@@ -1,0 +1,69 @@
+# docker-compose.prod.yml
+# Note: This file requires a .env file. Please copy .env.example to .env and adjust values if needed.
+services:
+  # Backend Node.js Service
+  backend:
+    build:
+      context: ./backend
+      target: production
+    container_name: tomcruise_backend_prod
+    restart: always
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    depends_on:
+      - postgres
+      - mongo
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MONGO_URL=${MONGO_URL}
+      - PORT=${PORT:-4000}
+      - NODE_ENV=production
+    networks:
+      - internal_net
+      - default
+
+  # Frontend React Service (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    container_name: tomcruise_frontend_prod
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - default
+
+  # PostgreSQL Database Service
+  postgres:
+    image: "postgres:14-alpine"
+    container_name: tomcruise_postgres_prod
+    restart: always
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    networks:
+      - internal_net
+
+  # MongoDB Database Service
+  mongo:
+    image: "mongo:5.0"
+    container_name: tomcruise_mongo_prod
+    restart: always
+    volumes:
+      - mongo_data_prod:/data/db
+    networks:
+      - internal_net
+
+volumes:
+  postgres_data_prod:
+  mongo_data_prod:
+
+networks:
+  internal_net:
+    internal: true

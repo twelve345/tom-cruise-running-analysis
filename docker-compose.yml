@@ -1,0 +1,62 @@
+# docker-compose.yml
+# Note: This file requires a .env file. Please copy .env.example to .env and adjust values if needed.
+services:
+  # Backend Node.js Service
+  backend:
+    build:
+      context: ./backend
+      target: development
+    container_name: tomcruise_backend
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - mongo
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MONGO_URL=${MONGO_URL}
+      - PORT=${PORT:-4000}
+      - NODE_ENV=${NODE_ENV:-development}
+
+  # Frontend React Service
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    container_name: tomcruise_frontend
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+
+  # PostgreSQL Database Service
+  postgres:
+    image: "postgres:14-alpine"
+    container_name: tomcruise_postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+
+  # MongoDB Database Service
+  mongo:
+    image: "mongo:5.0"
+    container_name: tomcruise_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  postgres_data:
+  mongo_data:
