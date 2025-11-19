@@ -4,6 +4,7 @@ services:
   backend:
     build:
       context: ./backend
+      target: production
     container_name: tomcruise_backend_prod
     restart: always
     ports:

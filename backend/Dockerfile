@@ -1,22 +1,20 @@
 # backend/Dockerfile
 
-# Use an official Node.js runtime as a parent image
-FROM node:20-alpine
-
-# Set the working directory in the container
+# Base stage
+FROM node:20-alpine AS base
 WORKDIR /app
-
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install app dependencies
 RUN npm install
 
-# Copy the rest of your app's source code
+# Development stage
+FROM base AS development
 COPY . .
-
-# Your app binds to port 4000, so you need to expose it
 EXPOSE 4000
+CMD [ "npm", "run", "dev" ]
 
-# Define the command to run your app
+# Production stage
+FROM base AS production
+COPY . .
+RUN npm ci --only=production
+EXPOSE 4000
 CMD [ "npm", "run", "start" ]

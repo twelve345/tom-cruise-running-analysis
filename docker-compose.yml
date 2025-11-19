@@ -4,6 +4,7 @@ services:
   backend:
     build:
       context: ./backend
+      target: development
     container_name: tomcruise_backend
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
