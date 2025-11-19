@@ -1,4 +1,5 @@
 # docker-compose.yml
+# Note: This file requires a .env file. Please copy .env.example to .env and adjust values if needed.
 services:
   # Backend Node.js Service
   backend:
