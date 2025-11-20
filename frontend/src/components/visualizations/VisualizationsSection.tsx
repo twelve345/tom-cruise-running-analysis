@@ -20,6 +20,12 @@ import {
   GET_TOP_CPI_FILMS,
 } from '../../graphql/queries';
 import { getCategory } from '../../utils/distanceCategories';
+import type {
+  GetVisualizationDataResult,
+  GetTopRunningFilmsResult,
+  GetTopCpiFilmsResult,
+  Film,
+} from '../../graphql/types';
 
 // Register all Chart.js components
 ChartJS.register(
@@ -81,19 +87,23 @@ const crosshairPlugin = {
 
 export const VisualizationsSection: React.FC = () => {
   // Fetch data from GraphQL
-  const { loading: loadingViz, error: errorViz, data: vizData } = useQuery(GET_VISUALIZATION_DATA);
+  const {
+    loading: loadingViz,
+    error: errorViz,
+    data: vizData,
+  } = useQuery<GetVisualizationDataResult>(GET_VISUALIZATION_DATA);
   const {
     loading: loadingTop,
     error: errorTop,
     data: topData,
-  } = useQuery(GET_TOP_RUNNING_FILMS, {
+  } = useQuery<GetTopRunningFilmsResult>(GET_TOP_RUNNING_FILMS, {
     variables: { limit: 10 },
   });
   const {
     loading: loadingCpi,
     error: errorCpi,
     data: cpiData,
-  } = useQuery(GET_TOP_CPI_FILMS, {
+  } = useQuery<GetTopCpiFilmsResult>(GET_TOP_CPI_FILMS, {
     variables: { limit: 10 },
   });
 
@@ -105,19 +115,23 @@ export const VisualizationsSection: React.FC = () => {
     return <div className="text-center text-red-400">Error loading charts</div>;
   }
 
+  if (!vizData?.films || !topData?.topRunningFilms || !cpiData?.topCpiFilms) {
+    return null;
+  }
+
   // ========== CHART 1: Running Over Time (Original) ==========
   const runningMovies = [...vizData.films]
-    .filter((m: any) => m.totalRunningDistanceFeet > 0)
-    .sort((a: any, b: any) => a.year - b.year);
+    .filter((m: Film) => m.totalRunningDistanceFeet > 0)
+    .sort((a: Film, b: Film) => a.year - b.year);
 
   const runningOverTimeData = {
     labels: runningMovies.map(
-      (m: any) => `${m.year} - ${m.title.substring(0, 15)}${m.title.length > 15 ? '...' : ''}`
+      (m: Film) => `${m.year} - ${m.title.substring(0, 15)}${m.title.length > 15 ? '...' : ''}`
     ),
     datasets: [
       {
         label: 'Running Distance (feet)',
-        data: runningMovies.map((m: any) => m.totalRunningDistanceFeet),
+        data: runningMovies.map((m: Film) => m.totalRunningDistanceFeet),
         backgroundColor: COLORS.primaryLight,
         borderColor: COLORS.primaryBorder,
         borderWidth: 1,
@@ -128,7 +142,7 @@ export const VisualizationsSection: React.FC = () => {
   const runningOverTimeOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -169,7 +183,7 @@ export const VisualizationsSection: React.FC = () => {
     'Full Tom (1001+ ft)': [],
   };
 
-  vizData.films.forEach((movie: any) => {
+  vizData.films.forEach((movie: Film) => {
     const category = getCategory(movie.totalRunningDistanceFeet);
     let label = '';
     if (category === 'none') label = 'No Run (0 ft)';
@@ -204,7 +218,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -227,12 +241,12 @@ export const VisualizationsSection: React.FC = () => {
   // ========== CHART 3: Top 10 Running Films Leaderboard ==========
   const topRunningData = {
     labels: topData.topRunningFilms.map(
-      (f: any) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
+      (f: Film) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
     ),
     datasets: [
       {
         label: 'Running Distance (feet)',
-        data: topData.topRunningFilms.map((f: any) => f.totalRunningDistanceFeet),
+        data: topData.topRunningFilms.map((f: Film) => f.totalRunningDistanceFeet),
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primaryBorder,
         borderWidth: 1,
@@ -244,7 +258,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -278,12 +292,12 @@ export const VisualizationsSection: React.FC = () => {
   // ========== CHART 4: Top 10 CPI Leaderboard ==========
   const topCpiChartData = {
     labels: cpiData.topCpiFilms.map(
-      (f: any) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
+      (f: Film) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
     ),
     datasets: [
       {
         label: 'CPI Score',
-        data: cpiData.topCpiFilms.map((f: any) => f.cpiScore),
+        data: cpiData.topCpiFilms.map((f: Film) => f.cpiScore),
         backgroundColor: COLORS.secondary,
         borderColor: COLORS.secondary.replace('0.8', '1'),
         borderWidth: 1,
@@ -295,7 +309,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -320,7 +334,7 @@ export const VisualizationsSection: React.FC = () => {
           label: function (context: any) {
             const film = cpiData.topCpiFilms[context.dataIndex];
             return [
-              `CPI: ${film.cpiScore.toFixed(2)}`,
+              `CPI: ${film.cpiScore ? film.cpiScore.toFixed(2) : 'N/A'}`,
               `Distance: ${film.totalRunningDistanceFeet} feet`,
               `RT Score: ${film.rottenTomatoesScore}%`,
             ];
@@ -338,7 +352,7 @@ export const VisualizationsSection: React.FC = () => {
     'Full Tom': 0,
   };
 
-  vizData.films.forEach((movie: any) => {
+  vizData.films.forEach((movie: Film) => {
     const category = getCategory(movie.totalRunningDistanceFeet);
     if (category === 'none') categoryCounts['No Run']++;
     else if (category === 'sprint') categoryCounts['Short Sprint']++;
@@ -363,7 +377,7 @@ export const VisualizationsSection: React.FC = () => {
   const categoryPieOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     plugins: {
@@ -388,11 +402,11 @@ export const VisualizationsSection: React.FC = () => {
   };
 
   // ========== CHART 6: Cumulative Career Distance (Line) ==========
-  const filmsByYear = [...vizData.films].sort((a: any, b: any) => a.year - b.year);
+  const filmsByYear = [...vizData.films].sort((a: Film, b: Film) => a.year - b.year);
   const cumulativeData: { year: number; distance: number }[] = [];
   let runningTotal = 0;
 
-  filmsByYear.forEach((film: any) => {
+  filmsByYear.forEach((film: Film) => {
     runningTotal += film.totalRunningDistanceFeet;
     cumulativeData.push({ year: film.year, distance: runningTotal });
   });
@@ -416,7 +430,7 @@ export const VisualizationsSection: React.FC = () => {
   const cumulativeOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     interaction: {
@@ -484,7 +498,7 @@ export const VisualizationsSection: React.FC = () => {
   const qualityScatterOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -565,7 +579,7 @@ export const VisualizationsSection: React.FC = () => {
   const cpiScatterOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -665,7 +679,7 @@ export const VisualizationsSection: React.FC = () => {
   const decadeOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -720,7 +734,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -791,7 +805,7 @@ export const VisualizationsSection: React.FC = () => {
   const missionOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: any, activeElements: any[], chart: any) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     interaction: {
