@@ -1,6 +1,6 @@
 {
   "**/*.{js,jsx,ts,tsx,json,css,md}": ["prettier --write"],
   "backend/**/*.js": ["eslint --fix"],
-  "frontend/**/*.{ts,tsx}": ["eslint --fix"],
+  "frontend/**/*.{ts,tsx}": ["eslint --fix", "bash -c 'cd frontend && npx tsc --noEmit'"],
   "**/*.{js,jsx,ts,tsx,json,md}": ["secretlint"]
 }
