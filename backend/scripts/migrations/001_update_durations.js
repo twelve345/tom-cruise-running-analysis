@@ -1,5 +1,5 @@
 require('dotenv').config();
-const pool = require('../db/postgres');
+const pool = require('../../db/postgres');
 
 /**
  * Migration: Update running instance durations
