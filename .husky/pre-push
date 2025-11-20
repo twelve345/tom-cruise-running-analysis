@@ -4,6 +4,26 @@
 echo "🔍 Running pre-push checks..."
 echo ""
 
+# Lint backend
+echo "→ Linting backend..."
+npm run lint --workspace=backend -- --max-warnings=0 || {
+  echo "❌ Backend linting failed!"
+  echo "💡 Run 'npm run lint --workspace=backend' to see errors"
+  exit 1
+}
+echo "✓ Backend linting passed"
+echo ""
+
+# Lint frontend
+echo "→ Linting frontend..."
+npm run lint --workspace=frontend -- --max-warnings=0 || {
+  echo "❌ Frontend linting failed!"
+  echo "💡 Run 'npm run lint --workspace=frontend' to see errors"
+  exit 1
+}
+echo "✓ Frontend linting passed"
+echo ""
+
 # TypeScript type check (with incremental caching)
 echo "→ Running TypeScript type check..."
 cd frontend && npx tsc --noEmit --incremental || {
@@ -12,6 +32,17 @@ cd frontend && npx tsc --noEmit --incremental || {
 }
 cd ..
 echo "✓ TypeScript type check passed"
+echo ""
+
+# Security audit
+echo "→ Running security audit..."
+npm audit --audit-level=high --workspaces || {
+  echo "❌ Security vulnerabilities detected!"
+  echo "💡 Run 'npm audit fix' to attempt automatic fixes"
+  echo "💡 Or use '--no-verify' to bypass if vulnerabilities are accepted risks"
+  exit 1
+}
+echo "✓ Security audit passed"
 echo ""
 
 # Run backend tests
