@@ -567,7 +567,7 @@ export const VisualizationsSection: React.FC = () => {
         label: 'CPI Performance',
         data: cpiScatterData,
         backgroundColor: (context: ScriptableContext<'scatter'>) => {
-          const cpi = (context.raw as { cpi?: number })?.cpi || 0;
+          const cpi = (context.raw as { cpi?: number })?.cpi ?? 0;
           // Color based on CPI value - higher CPI = more amber
           if (cpi > 20) return COLORS.primary;
           if (cpi > 10) return COLORS.tertiary;
@@ -576,7 +576,7 @@ export const VisualizationsSection: React.FC = () => {
         },
         borderColor: COLORS.primaryBorder,
         pointRadius: (context: ScriptableContext<'scatter'>) => {
-          const cpi = (context.raw as { cpi?: number })?.cpi || 0;
+          const cpi = (context.raw as { cpi?: number })?.cpi ?? 0;
           // Size based on CPI value
           return Math.min(Math.max(cpi / 2, 4), 12);
         },
@@ -721,7 +721,7 @@ export const VisualizationsSection: React.FC = () => {
   // ========== CHART 10: Running Density Analysis ==========
   const densityFilms = [...vizData.films]
     .filter((f) => f.runningDensity && f.runningDensity > 0)
-    .sort((a, b) => (b.runningDensity || 0) - (a.runningDensity || 0))
+    .sort((a, b) => (b.runningDensity ?? 0) - (a.runningDensity ?? 0))
     .slice(0, 15);
 
   const densityChartData = {
