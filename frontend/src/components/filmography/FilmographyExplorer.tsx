@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { GET_FILMS, GET_RUNNING_INSTANCES } from '../../graphql/queries';
 import { getCategory, getCategoryLabel } from '../../utils/distanceCategories';
+import type { GetFilmsResult, GetRunningInstancesResult, Film } from '../../graphql/types';
 
 type SortField =
   | 'year'
@@ -18,7 +19,7 @@ export const FilmographyExplorer: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const { loading, error, data } = useQuery(GET_FILMS, {
+  const { loading, error, data } = useQuery<GetFilmsResult>(GET_FILMS, {
     variables: {
       sortBy,
       sortOrder,
@@ -47,11 +48,12 @@ export const FilmographyExplorer: React.FC = () => {
     setExpandedRows(newExpanded);
   };
 
-  const filteredFilms = data.films.filter((film: any) => {
-    if (filterCategory === 'all') return true;
-    const category = getCategory(film.totalRunningDistanceFeet);
-    return category === filterCategory;
-  });
+  const filteredFilms =
+    data?.films.filter((film: Film) => {
+      if (filterCategory === 'all') return true;
+      const category = getCategory(film.totalRunningDistanceFeet);
+      return category === filterCategory;
+    }) || [];
 
   const getCategoryBadge = (distance: number) => {
     const category = getCategory(distance);
@@ -94,7 +96,7 @@ export const FilmographyExplorer: React.FC = () => {
             onChange={(e) => setFilterCategory(e.target.value)}
             className="ml-2 bg-slate-800 text-white border border-slate-700 rounded px-3 py-2"
           >
-            <option value="all">All Films ({data.films.length})</option>
+            <option value="all">All Films ({data?.films.length || 0})</option>
             <option value="full-tom">Full Tom (1001+ ft)</option>
             <option value="middle">Middle-Distance (501-1000 ft)</option>
             <option value="sprint">Short Sprint (1-500 ft)</option>
@@ -171,11 +173,11 @@ export const FilmographyExplorer: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {filteredFilms.map((film: any, index: number) => (
+              {filteredFilms.map((film: Film, index: number) => (
                 <React.Fragment key={film.id}>
                   {/* Main Row */}
                   <tr
-                    onClick={() => toggleRow(film.id)}
+                    onClick={() => toggleRow(String(film.id))}
                     className={`cursor-pointer hover:bg-slate-700/50 transition-colors ${
                       index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-850'
                     }`}
@@ -213,16 +215,16 @@ export const FilmographyExplorer: React.FC = () => {
                     </td>
                     <td className="px-4 py-4 text-center">
                       <button
-                        onClick={() => toggleRow(film.id)}
+                        onClick={() => toggleRow(String(film.id))}
                         className="text-amber-400 hover:text-amber-300 transition-colors text-xl cursor-pointer"
                       >
-                        {expandedRows.has(film.id) ? '▼' : '▶'}
+                        {expandedRows.has(String(film.id)) ? '▼' : '▶'}
                       </button>
                     </td>
                   </tr>
 
                   {/* Expanded Row */}
-                  {expandedRows.has(film.id) && (
+                  {expandedRows.has(String(film.id)) && (
                     <tr className="bg-slate-900">
                       <td colSpan={8} className="px-4 py-6">
                         <div className="flex flex-col md:flex-row gap-6">
@@ -407,7 +409,7 @@ export const FilmographyExplorer: React.FC = () => {
 
                         {/* Running Instances */}
                         {film.runningInstancesCount > 0 && (
-                          <RunningInstancesSection filmId={parseInt(film.id)} />
+                          <RunningInstancesSection filmId={film.id} />
                         )}
                       </td>
                     </tr>
@@ -426,7 +428,7 @@ export const FilmographyExplorer: React.FC = () => {
       </div>
 
       <div className="text-center text-slate-400 text-sm">
-        Showing {filteredFilms.length} of {data.films.length} films
+        Showing {filteredFilms.length} of {data?.films.length || 0} films
       </div>
     </section>
   );
@@ -441,9 +443,8 @@ interface RunningInstancesSectionProps {
 }
 
 const RunningInstancesSection: React.FC<RunningInstancesSectionProps> = ({ filmId }) => {
-  const [getRunningInstances, { loading, data, error }] = useLazyQuery(GET_RUNNING_INSTANCES, {
-    variables: { filmId, limit: 100 },
-  });
+  const [getRunningInstances, { loading, data, error }] =
+    useLazyQuery<GetRunningInstancesResult>(GET_RUNNING_INSTANCES);
 
   // Fetch instances on mount
   React.useEffect(() => {
@@ -487,7 +488,7 @@ const RunningInstancesSection: React.FC<RunningInstancesSectionProps> = ({ filmI
       </div>
 
       <div className="flex flex-wrap gap-3">
-        {instances.map((instance: any) => (
+        {instances.map((instance) => (
           <div
             key={instance.id}
             className="bg-slate-800 rounded p-2 border border-slate-700 hover:border-slate-600 transition-colors w-auto"

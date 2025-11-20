@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'node_modules', '**/*.config.{js,ts}', 'coverage']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -20,6 +20,28 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+    rules: {
+      // Strict TypeScript rules - block 'any' types
+      '@typescript-eslint/no-explicit-any': 'error',
+
+      // Catch unused variables/imports
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+
+      // Require consistent type imports
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        {
+          prefer: 'type-imports',
+          fixStyle: 'separate-type-imports',
+        },
+      ],
     },
   },
 ]);
