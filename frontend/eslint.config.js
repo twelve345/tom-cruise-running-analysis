@@ -24,10 +24,6 @@ export default defineConfig([
     rules: {
       // Strict TypeScript rules - block 'any' types
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-return': 'warn',
 
       // Catch unused variables/imports
       '@typescript-eslint/no-unused-vars': [

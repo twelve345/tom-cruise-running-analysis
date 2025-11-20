@@ -12,6 +12,11 @@ import {
   Tooltip,
   Legend,
   Filler,
+  type Chart,
+  type ChartEvent,
+  type ActiveElement,
+  type TooltipItem,
+  type ScriptableContext,
 } from 'chart.js';
 import { Bar, Line, Scatter, Doughnut } from 'react-chartjs-2';
 import {
@@ -65,10 +70,12 @@ const CATEGORY_COLORS = [
 // Custom crosshair plugin for vertical line on hover
 const crosshairPlugin = {
   id: 'crosshair',
-  afterDatasetsDraw(chart: any) {
-    if (chart.tooltip?._active?.length) {
+  afterDatasetsDraw(chart: Chart) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tooltip = chart.tooltip as any;
+    if (tooltip?._active?.length) {
       const ctx = chart.ctx;
-      const activePoint = chart.tooltip._active[0];
+      const activePoint = tooltip._active[0];
       const x = activePoint.element.x;
       const topY = chart.scales.y.top;
       const bottomY = chart.scales.y.bottom;
@@ -142,7 +149,7 @@ export const VisualizationsSection: React.FC = () => {
   const runningOverTimeOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -166,7 +173,7 @@ export const VisualizationsSection: React.FC = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
+          title: function (context: TooltipItem<'bar'>[]) {
             const movie = runningMovies[context[0].dataIndex];
             return `${movie.title} (${movie.year})`;
           },
@@ -183,7 +190,7 @@ export const VisualizationsSection: React.FC = () => {
     'Full Tom (1001+ ft)': [],
   };
 
-  vizData.films.forEach((movie: Film) => {
+  vizData.films.forEach((movie) => {
     const category = getCategory(movie.totalRunningDistanceFeet);
     let label = '';
     if (category === 'none') label = 'No Run (0 ft)';
@@ -218,7 +225,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -258,7 +265,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -276,11 +283,11 @@ export const VisualizationsSection: React.FC = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
+          title: function (context: TooltipItem<'bar'>[]) {
             const film = topData.topRunningFilms[context[0].dataIndex];
             return film.title;
           },
-          label: function (context: any) {
+          label: function (context: TooltipItem<'bar'>) {
             const film = topData.topRunningFilms[context.dataIndex];
             return [`Distance: ${context.parsed.x} feet`, `RT Score: ${film.rottenTomatoesScore}%`];
           },
@@ -309,7 +316,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -327,11 +334,11 @@ export const VisualizationsSection: React.FC = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
+          title: function (context: TooltipItem<'bar'>[]) {
             const film = cpiData.topCpiFilms[context[0].dataIndex];
             return film.title;
           },
-          label: function (context: any) {
+          label: function (context: TooltipItem<'bar'>) {
             const film = cpiData.topCpiFilms[context.dataIndex];
             return [
               `CPI: ${film.cpiScore ? film.cpiScore.toFixed(2) : 'N/A'}`,
@@ -352,7 +359,7 @@ export const VisualizationsSection: React.FC = () => {
     'Full Tom': 0,
   };
 
-  vizData.films.forEach((movie: Film) => {
+  vizData.films.forEach((movie) => {
     const category = getCategory(movie.totalRunningDistanceFeet);
     if (category === 'none') categoryCounts['No Run']++;
     else if (category === 'sprint') categoryCounts['Short Sprint']++;
@@ -377,7 +384,7 @@ export const VisualizationsSection: React.FC = () => {
   const categoryPieOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     plugins: {
@@ -391,7 +398,7 @@ export const VisualizationsSection: React.FC = () => {
       },
       tooltip: {
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<'doughnut'>) {
             const total = Object.values(categoryCounts).reduce((a: number, b: number) => a + b, 0);
             const percentage = ((context.parsed / total) * 100).toFixed(1);
             return `${context.label}: ${percentage}%`;
@@ -402,11 +409,11 @@ export const VisualizationsSection: React.FC = () => {
   };
 
   // ========== CHART 6: Cumulative Career Distance (Line) ==========
-  const filmsByYear = [...vizData.films].sort((a: Film, b: Film) => a.year - b.year);
+  const filmsByYear = [...vizData.films].sort((a, b) => a.year - b.year);
   const cumulativeData: { year: number; distance: number }[] = [];
   let runningTotal = 0;
 
-  filmsByYear.forEach((film: Film) => {
+  filmsByYear.forEach((film) => {
     runningTotal += film.totalRunningDistanceFeet;
     cumulativeData.push({ year: film.year, distance: runningTotal });
   });
@@ -430,7 +437,7 @@ export const VisualizationsSection: React.FC = () => {
   const cumulativeOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     interaction: {
@@ -442,8 +449,10 @@ export const VisualizationsSection: React.FC = () => {
         beginAtZero: true,
         ticks: {
           color: '#94a3b8',
-          callback: function (value: any) {
-            return value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value;
+          callback: function (value: string | number) {
+            return typeof value === 'number' && value >= 1000
+              ? (value / 1000).toFixed(1) + 'k'
+              : value;
           },
         },
         grid: { color: '#334155' },
@@ -457,13 +466,13 @@ export const VisualizationsSection: React.FC = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
+          title: function (context: TooltipItem<'line'>[]) {
             const year = cumulativeData[context[0].dataIndex].year;
-            const film = filmsByYear.find((f: any) => f.year === year);
+            const film = filmsByYear.find((f) => f.year === year);
             return `${year} - ${film?.title || ''}`;
           },
-          label: function (context: any) {
-            const feet = context.parsed.y;
+          label: function (context: TooltipItem<'line'>) {
+            const feet = context.parsed.y ?? 0;
             const miles = (feet / 5280).toFixed(2);
             return [`Cumulative: ${feet.toLocaleString()} feet`, `Career Total: ${miles} miles`];
           },
@@ -474,8 +483,8 @@ export const VisualizationsSection: React.FC = () => {
 
   // ========== CHART 7: Quality vs Distance Scatter ==========
   const scatterData = vizData.films
-    .filter((f: any) => f.totalRunningDistanceFeet > 0 && f.rottenTomatoesScore !== null)
-    .map((f: any) => ({
+    .filter((f) => f.totalRunningDistanceFeet > 0 && f.rottenTomatoesScore !== null)
+    .map((f) => ({
       x: f.totalRunningDistanceFeet,
       y: f.rottenTomatoesScore,
       title: f.title,
@@ -498,7 +507,7 @@ export const VisualizationsSection: React.FC = () => {
   const qualityScatterOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -529,11 +538,11 @@ export const VisualizationsSection: React.FC = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
-            const point = context[0].raw;
+          title: function (context: TooltipItem<'scatter'>[]) {
+            const point = context[0].raw as { title: string; year: number };
             return `${point.title} (${point.year})`;
           },
-          label: function (context: any) {
+          label: function (context: TooltipItem<'scatter'>) {
             return [`Distance: ${context.parsed.x} feet`, `RT Score: ${context.parsed.y}%`];
           },
         },
@@ -543,8 +552,8 @@ export const VisualizationsSection: React.FC = () => {
 
   // ========== CHART 8: CPI Scatter Plot ==========
   const cpiScatterData = vizData.films
-    .filter((f: any) => f.cpiScore && f.cpiScore > 0)
-    .map((f: any) => ({
+    .filter((f) => f.cpiScore && f.cpiScore > 0)
+    .map((f) => ({
       x: f.totalRunningDistanceFeet,
       y: f.rottenTomatoesScore,
       cpi: f.cpiScore,
@@ -557,20 +566,20 @@ export const VisualizationsSection: React.FC = () => {
       {
         label: 'CPI Performance',
         data: cpiScatterData,
-        backgroundColor: (context: any) => {
-          const cpi = context.raw?.cpi || 0;
+        backgroundColor: ((context: ScriptableContext<'scatter'>) => {
+          const cpi = (context.raw as { cpi?: number })?.cpi || 0;
           // Color based on CPI value - higher CPI = more amber
           if (cpi > 20) return COLORS.primary;
           if (cpi > 10) return COLORS.tertiary;
           if (cpi > 5) return COLORS.secondary;
           return COLORS.slate;
-        },
+        }) as unknown as string,
         borderColor: COLORS.primaryBorder,
-        pointRadius: (context: any) => {
-          const cpi = context.raw?.cpi || 0;
+        pointRadius: ((context: ScriptableContext<'scatter'>) => {
+          const cpi = (context.raw as { cpi?: number })?.cpi || 0;
           // Size based on CPI value
           return Math.min(Math.max(cpi / 2, 4), 12);
-        },
+        }) as unknown as number,
         pointHoverRadius: 12,
       },
     ],
@@ -579,7 +588,7 @@ export const VisualizationsSection: React.FC = () => {
   const cpiScatterOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -610,12 +619,12 @@ export const VisualizationsSection: React.FC = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
-            const point = context[0].raw;
+          title: function (context: TooltipItem<'scatter'>[]) {
+            const point = context[0].raw as { title: string; year: number; cpi: number };
             return `${point.title} (${point.year})`;
           },
-          label: function (context: any) {
-            const point = context.raw;
+          label: function (context: TooltipItem<'scatter'>) {
+            const point = context.raw as { cpi: number };
             return [
               `CPI: ${point.cpi.toFixed(2)}`,
               `Distance: ${context.parsed.x} feet`,
@@ -636,7 +645,7 @@ export const VisualizationsSection: React.FC = () => {
     '2020s': { distance: [], count: 0 },
   };
 
-  vizData.films.forEach((film: any) => {
+  vizData.films.forEach((film) => {
     const decade = Math.floor(film.year / 10) * 10;
     const decadeLabel = `${decade}s`;
     if (decadeData[decadeLabel]) {
@@ -679,7 +688,7 @@ export const VisualizationsSection: React.FC = () => {
   const decadeOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -700,7 +709,7 @@ export const VisualizationsSection: React.FC = () => {
       },
       tooltip: {
         callbacks: {
-          afterLabel: function (context: any) {
+          afterLabel: function (context: TooltipItem<'bar'>) {
             const decade = context.label;
             return `Films: ${decadeData[decade].count}`;
           },
@@ -711,18 +720,18 @@ export const VisualizationsSection: React.FC = () => {
 
   // ========== CHART 10: Running Density Analysis ==========
   const densityFilms = [...vizData.films]
-    .filter((f: any) => f.runningDensity && f.runningDensity > 0)
-    .sort((a: any, b: any) => b.runningDensity - a.runningDensity)
+    .filter((f) => f.runningDensity && f.runningDensity > 0)
+    .sort((a, b) => (b.runningDensity || 0) - (a.runningDensity || 0))
     .slice(0, 15);
 
   const densityChartData = {
     labels: densityFilms.map(
-      (f: any) => `${f.title.substring(0, 18)}${f.title.length > 18 ? '...' : ''}`
+      (f) => `${f.title.substring(0, 18)}${f.title.length > 18 ? '...' : ''}`
     ),
     datasets: [
       {
         label: 'Running Density (feet/minute)',
-        data: densityFilms.map((f: any) => f.runningDensity),
+        data: densityFilms.map((f) => f.runningDensity),
         backgroundColor: COLORS.tertiary,
         borderColor: COLORS.tertiary.replace('0.8', '1'),
         borderWidth: 1,
@@ -734,7 +743,7 @@ export const VisualizationsSection: React.FC = () => {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     scales: {
@@ -752,14 +761,14 @@ export const VisualizationsSection: React.FC = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
+          title: function (context: TooltipItem<'bar'>[]) {
             const film = densityFilms[context[0].dataIndex];
             return `${film.title} (${film.year})`;
           },
-          label: function (context: any) {
+          label: function (context: TooltipItem<'bar'>) {
             const film = densityFilms[context.dataIndex];
             return [
-              `Density: ${context.parsed.x.toFixed(2)} feet/min`,
+              `Density: ${(context.parsed.x ?? 0).toFixed(2)} feet/min`,
               `Total Distance: ${film.totalRunningDistanceFeet} feet`,
             ];
           },
@@ -770,18 +779,18 @@ export const VisualizationsSection: React.FC = () => {
 
   // ========== CHART 11: Mission: Impossible Franchise Focus ==========
   const missionFilms = [...vizData.films]
-    .filter((f: any) => f.title.toLowerCase().includes('mission: impossible'))
-    .sort((a: any, b: any) => a.year - b.year);
+    .filter((f) => f.title.toLowerCase().includes('mission: impossible'))
+    .sort((a, b) => a.year - b.year);
 
   const missionChartData = {
-    labels: missionFilms.map((f: any) => {
+    labels: missionFilms.map((f) => {
       const shortTitle = f.title.replace('Mission: Impossible', 'M:I');
       return `${shortTitle.substring(0, 25)} (${f.year})`;
     }),
     datasets: [
       {
         label: 'Running Distance (feet)',
-        data: missionFilms.map((f: any) => f.totalRunningDistanceFeet),
+        data: missionFilms.map((f) => f.totalRunningDistanceFeet),
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primaryBorder,
         borderWidth: 2,
@@ -791,7 +800,7 @@ export const VisualizationsSection: React.FC = () => {
       },
       {
         label: 'RT Score (%)',
-        data: missionFilms.map((f: any) => f.rottenTomatoesScore),
+        data: missionFilms.map((f) => f.rottenTomatoesScore),
         backgroundColor: COLORS.success,
         borderColor: COLORS.success.replace('0.8', '1'),
         borderWidth: 2,
@@ -805,7 +814,7 @@ export const VisualizationsSection: React.FC = () => {
   const missionOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onHover: (_event: any, activeElements: any[], chart: any) => {
+    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
       chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
     },
     interaction: {
@@ -860,15 +869,15 @@ export const VisualizationsSection: React.FC = () => {
       },
       tooltip: {
         callbacks: {
-          title: function (context: any) {
+          title: function (context: TooltipItem<'line'>[]) {
             const film = missionFilms[context[0].dataIndex];
             return film.title;
           },
-          label: function (context: any) {
+          label: function (context: TooltipItem<'line'>) {
             if (context.datasetIndex === 0) {
-              return `Distance: ${context.parsed.y.toLocaleString()} feet`;
+              return `Distance: ${(context.parsed.y ?? 0).toLocaleString()} feet`;
             } else {
-              return `RT Score: ${context.parsed.y}%`;
+              return `RT Score: ${context.parsed.y ?? 0}%`;
             }
           },
         },
