@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "start:railway": "bash scripts/startup.sh && node index.js",
     "dev": "nodemon index.js",
     "db:init": "node scripts/initDb.js",
     "db:seed": "node scripts/seedDb.js",
     "db:setup": "npm run db:init && npm run db:seed",
-    "db:migrate": "node scripts/migrations/001_update_durations.js",
+    "db:migrate": "node scripts/migrate.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest"
