@@ -78,7 +78,7 @@ async function seedDatabase() {
     });
 
     // Sort instances within each film by rank (lower rank = better = sequence 1)
-    instancesByFilm.forEach((filmInstances, filmId) => {
+    instancesByFilm.forEach((filmInstances, _filmId) => {
       filmInstances.sort((a, b) => a.rank - b.rank);
       filmInstances.forEach((instance, index) => {
         instance.sequenceNumber = index + 1;
