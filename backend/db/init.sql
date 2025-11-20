@@ -7,11 +7,15 @@ CREATE TABLE IF NOT EXISTS films (
   rotten_tomatoes_score INTEGER,
   total_running_distance_feet INTEGER DEFAULT 0,
   total_running_time_seconds DECIMAL(10, 2) DEFAULT 0,
-  running_instances_count INTEGER DEFAULT 0,
   running_density DECIMAL(10, 4), -- feet per minute
   cpi_score DECIMAL(10, 4), -- Cruise Performance Index
   poster_url TEXT,
   imdb_id VARCHAR(20),
+  tmdb_id INTEGER,
+  rotten_tomatoes_url TEXT,
+  wikipedia_url TEXT,
+  youtube_trailer_url TEXT,
+  letterboxd_url TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -74,11 +78,6 @@ BEGIN
     ),
     total_running_time_seconds = (
       SELECT COALESCE(SUM(duration_seconds), 0)
-      FROM running_instances
-      WHERE film_id = NEW.film_id
-    ),
-    running_instances_count = (
-      SELECT COUNT(*)
       FROM running_instances
       WHERE film_id = NEW.film_id
     ),

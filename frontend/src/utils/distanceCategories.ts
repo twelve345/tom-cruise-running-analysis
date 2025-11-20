@@ -13,6 +13,8 @@ export const getCategoryLabel = (category: string): string => {
       return 'Middle-Distance (501-1000 ft)';
     case 'sprint':
       return 'Short Sprint (1-500 ft)';
+    case 'none':
+      return 'No Distance';
     default:
       return 'All Distances';
   }
