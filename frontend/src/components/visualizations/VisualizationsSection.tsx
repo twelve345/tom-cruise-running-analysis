@@ -566,7 +566,7 @@ export const VisualizationsSection: React.FC = () => {
       {
         label: 'CPI Performance',
         data: cpiScatterData,
-        backgroundColor: (context: ScriptableContext<'scatter'>) => {
+        backgroundColor: (context: ScriptableContext<'line'>) => {
           const cpi = (context.raw as { cpi?: number })?.cpi ?? 0;
           // Color based on CPI value - higher CPI = more amber
           if (cpi > 20) return COLORS.primary;
@@ -575,7 +575,7 @@ export const VisualizationsSection: React.FC = () => {
           return COLORS.slate;
         },
         borderColor: COLORS.primaryBorder,
-        pointRadius: (context: ScriptableContext<'scatter'>) => {
+        pointRadius: (context: ScriptableContext<'line'>) => {
           const cpi = (context.raw as { cpi?: number })?.cpi ?? 0;
           // Size based on CPI value
           return Math.min(Math.max(cpi / 2, 4), 12);
