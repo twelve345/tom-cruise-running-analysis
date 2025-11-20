@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "start:railway": "bash scripts/startup.sh && node index.js",
+    "start:railway": "sh scripts/startup.sh && node index.js",
     "dev": "nodemon index.js",
     "db:init": "node scripts/initDb.js",
     "db:seed": "node scripts/seedDb.js",

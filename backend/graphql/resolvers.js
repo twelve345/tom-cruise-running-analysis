@@ -428,7 +428,7 @@ const resolvers = {
       if (result.value) {
         return mapMongoRunningInstance(result.value);
       }
-    } catch (err) {
+    } catch (_err) {
       // Not a MongoDB ObjectId, try PostgreSQL
     }
 
