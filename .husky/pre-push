@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-push checks..."
+echo ""
+
+# Run frontend tests
+echo "→ Running frontend tests..."
+npm run test --workspace=frontend -- --run || {
+  echo "❌ Frontend tests failed!"
+  exit 1
+}
+echo "✓ Frontend tests passed"
+echo ""
+
+# Run backend tests
+echo "→ Running backend tests..."
+npm run test --workspace=backend || {
+  echo "❌ Backend tests failed!"
+  exit 1
+}
+echo "✓ Backend tests passed"
+echo ""
+
+# Full TypeScript type check
+echo "→ Running full TypeScript type check..."
+cd frontend && npx tsc --noEmit || {
+  echo "❌ TypeScript type check failed!"
+  exit 1
+}
+cd ..
+echo "✓ TypeScript type check passed"
+echo ""
+
+# Build verification
+echo "→ Verifying frontend build..."
+npm run build --workspace=frontend || {
+  echo "❌ Frontend build failed!"
+  exit 1
+}
+echo "✓ Frontend build passed"
+echo ""
+
+echo "✅ All pre-push checks passed!"
