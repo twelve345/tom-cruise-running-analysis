@@ -96,7 +96,7 @@ export const FilmographyExplorer: React.FC = () => {
             onChange={(e) => setFilterCategory(e.target.value)}
             className="ml-2 bg-slate-800 text-white border border-slate-700 rounded px-3 py-2"
           >
-            <option value="all">All Films ({data?.films.length || 0})</option>
+            <option value="all">All Films ({data?.films.length ?? 0})</option>
             <option value="full-tom">Full Tom (1001+ ft)</option>
             <option value="middle">Middle-Distance (501-1000 ft)</option>
             <option value="sprint">Short Sprint (1-500 ft)</option>
@@ -428,7 +428,7 @@ export const FilmographyExplorer: React.FC = () => {
       </div>
 
       <div className="text-center text-slate-400 text-sm">
-        Showing {filteredFilms.length} of {data?.films.length || 0} films
+        Showing {filteredFilms.length} of {data?.films.length ?? 0} films
       </div>
     </section>
   );
