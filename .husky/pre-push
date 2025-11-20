@@ -4,13 +4,14 @@
 echo "🔍 Running pre-push checks..."
 echo ""
 
-# Run frontend tests
-echo "→ Running frontend tests..."
-npm run test --workspace=frontend -- --run || {
-  echo "❌ Frontend tests failed!"
+# TypeScript type check (with incremental caching)
+echo "→ Running TypeScript type check..."
+cd frontend && npx tsc --noEmit --incremental || {
+  echo "❌ TypeScript type check failed!"
   exit 1
 }
-echo "✓ Frontend tests passed"
+cd ..
+echo "✓ TypeScript type check passed"
 echo ""
 
 # Run backend tests
@@ -22,23 +23,13 @@ npm run test --workspace=backend || {
 echo "✓ Backend tests passed"
 echo ""
 
-# Full TypeScript type check
-echo "→ Running full TypeScript type check..."
-cd frontend && npx tsc --noEmit || {
-  echo "❌ TypeScript type check failed!"
+# Run frontend tests
+echo "→ Running frontend tests..."
+npm run test --workspace=frontend -- --run || {
+  echo "❌ Frontend tests failed!"
   exit 1
 }
-cd ..
-echo "✓ TypeScript type check passed"
-echo ""
-
-# Build verification
-echo "→ Verifying frontend build..."
-npm run build --workspace=frontend || {
-  echo "❌ Frontend build failed!"
-  exit 1
-}
-echo "✓ Frontend build passed"
+echo "✓ Frontend tests passed"
 echo ""
 
 echo "✅ All pre-push checks passed!"

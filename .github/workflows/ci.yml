@@ -24,12 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linters
+      - name: Run linters (strict)
         run: |
           echo "→ Linting backend..."
-          npm run lint --workspace=backend
+          npm run lint --workspace=backend -- --max-warnings=0
           echo "→ Linting frontend..."
-          npm run lint --workspace=frontend
+          npm run lint --workspace=frontend -- --max-warnings=0
 
       - name: TypeScript type check
         run: |

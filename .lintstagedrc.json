@@ -1,9 +1,4 @@
 {
-  "**/*.{js,jsx,ts,tsx,json,css,md}": ["prettier --write"],
-  "backend/**/*.js": ["eslint --fix --max-warnings=0"],
-  "frontend/**/*.{ts,tsx}": [
-    "eslint --fix --max-warnings=0",
-    "bash -c 'cd frontend && npx tsc --noEmit'"
-  ],
-  "**/*.{js,jsx,ts,tsx,json,md}": ["secretlint"]
+  "**/*.{json,css,md}": ["prettier --write"],
+  "**/*": ["secretlint"]
 }
