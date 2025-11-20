@@ -851,7 +851,6 @@ export const VisualizationsSection: React.FC = () => {
             return film.title;
           },
           label: function (context: any) {
-            const film = missionFilms[context.dataIndex];
             if (context.datasetIndex === 0) {
               return `Distance: ${context.parsed.y.toLocaleString()} feet`;
             } else {
