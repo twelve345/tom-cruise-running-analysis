@@ -11,7 +11,31 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'https://tomcruiserunningtime.com',
+  'https://www.tomcruiserunningtime.com',
+  'https://tomcruise-frontend-production.up.railway.app',
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        // For development convenience, you might want to log this but still allow it,
+        // or strictly block it. For now, let's be strict but helpful in logs.
+        console.log('Blocked by CORS:', origin);
+        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Health check endpoint
