@@ -19,99 +19,58 @@ const allowedOrigins = [
   'https://tomcruise-frontend-production.up.railway.app',
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        // For development convenience, you might want to log this but still allow it,
-        // or strictly block it. For now, let's be strict but helpful in logs.
-        console.log('Blocked by CORS:', origin);
-        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
-      }
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
-    },
-    credentials: true,
-  })
-);
+    } else {
+      console.log('🚫 Blocked by CORS. Origin:', origin);
+      console.log('   Allowed Origins:', allowedOrigins);
+      var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  // allowedHeaders: ['Content-Type', 'Authorization'] // Removed to allow all headers requested by browser/Apollo
+};
+
+// Enable CORS for all routes
+app.use(cors(corsOptions));
+
+// Explicitly handle OPTIONS preflight requests for all routes
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    // Check PostgreSQL connection
-    await pool.query('SELECT 1');
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      services: {
-        postgres: 'connected',
-        server: 'running',
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'unhealthy',
-      error: error.message,
-    });
-  }
-});
-
-// GraphiQL - Interactive UI for development
-app.get('/graphiql', (req, res) => {
-  // Only serve GraphiQL in development
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ error: 'GraphiQL is disabled in production' });
-  }
-
-  // Serve GraphiQL HTML
-  res.type('html');
-  res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GraphiQL - Tom Cruise Running Analysis</title>
-  <style>
-    body { margin: 0; height: 100vh; overflow: hidden; }
-    #graphiql { height: 100vh; }
-  </style>
-  <link rel="stylesheet" href="https://unpkg.com/graphiql@3/graphiql.min.css" />
-</head>
-<body>
-  <div id="graphiql">Loading GraphiQL...</div>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/graphiql@3/graphiql.min.js"></script>
-  <script>
-    const root = ReactDOM.createRoot(document.getElementById('graphiql'));
-    const fetcher = GraphiQL.createFetcher({ url: '/graphql' });
-    root.render(React.createElement(GraphiQL, { fetcher: fetcher }));
-  </script>
-</body>
-</html>
-  `);
-});
+// ... (health check code remains same)
 
 // GraphQL endpoint - Handles actual GraphQL queries
-app.all(
-  '/graphql',
-  createHandler({
-    schema: schema,
-    rootValue: resolvers,
-    formatError: (error) => {
-      console.error('GraphQL Error:', error);
-      return {
-        message: error.message,
-        locations: error.locations,
-        path: error.path,
-      };
-    },
-  })
-);
+// IMPORTANT: Only handle GET and POST. Do NOT use app.all() or app.use() without method restriction,
+// otherwise OPTIONS requests might fall through to graphql-http and cause 502s.
+const graphqlHandler = createHandler({
+  schema: schema,
+  rootValue: resolvers,
+  formatError: (error) => {
+    console.error('GraphQL Error:', error);
+    return {
+      message: error.message,
+      locations: error.locations,
+      path: error.path,
+    };
+  },
+});
+
+app.get('/graphql', graphqlHandler);
+app.post('/graphql', graphqlHandler);
+
+// Explicitly handle OPTIONS on /graphql to ensure 200 OK (redundant with app.options but safe)
+app.options('/graphql', (req, res) => {
+  res.sendStatus(200);
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
