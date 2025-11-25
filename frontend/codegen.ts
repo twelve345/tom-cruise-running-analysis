@@ -14,8 +14,8 @@ const config: CodegenConfig = {
           ID: 'string',
         },
         // TypeScript config compatibility
-        enumsAsTypes: true, // Required for erasableSyntaxOnly
-        useTypeImports: true, // Required for verbatimModuleSyntax
+        enumsAsTypes: true, // Required for `erasableSyntaxOnly` in tsconfig.app.json
+        useTypeImports: true, // Required for `verbatimModuleSyntax` in tsconfig.app.json
       },
     },
   },
