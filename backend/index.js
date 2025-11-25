@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
-const allowedOrigins = [
+const _allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:4173',
   'https://tomcruiserunningtime.com',
@@ -19,23 +19,23 @@ const allowedOrigins = [
   'https://tomcruise-frontend-production.up.railway.app',
 ];
 
+// Global Request Logger - Debugging Production Issues
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('   Headers Origin:', req.headers.origin);
+  next();
+});
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
-    } else {
-      console.log('🚫 Blocked by CORS. Origin:', origin);
-      console.log('   Allowed Origins:', allowedOrigins);
-      var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
+    // NUCLEAR OPTION: Allow ALL origins to rule out logic errors.
+    // We will restrict this back to 'allowedOrigins' once we confirm it works.
+    console.log('✅ CORS Allowed (Debug Mode). Origin:', origin);
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
-  // allowedHeaders: ['Content-Type', 'Authorization'] // Removed to allow all headers requested by browser/Apollo
+  // allowedHeaders: ['Content-Type', 'Authorization'] // Removed to allow all headers
 };
 
 // Enable CORS for all routes
@@ -48,23 +48,25 @@ app.use(express.json());
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
+  let postgresStatus = 'unknown';
+
   try {
-    // Check PostgreSQL connection
     await pool.query('SELECT 1');
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      services: {
-        postgres: 'connected',
-        server: 'running',
-      },
-    });
+    postgresStatus = 'connected';
   } catch (error) {
-    res.status(500).json({
-      status: 'unhealthy',
-      error: error.message,
-    });
+    postgresStatus = `error: ${error.message}`;
   }
+
+  const isHealthy = postgresStatus === 'connected';
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'healthy' : 'degraded',
+    timestamp: new Date().toISOString(),
+    services: {
+      postgres: postgresStatus,
+      server: 'running',
+    },
+  });
 });
 
 // GraphiQL - Interactive UI for development
@@ -152,35 +154,35 @@ app.use((err, req, res, _next) => {
 
 // Initialize connections and start server
 async function startServer() {
-  try {
-    console.log('🚀 Starting Tom Cruise Running Analysis API...\n');
+  console.log('🚀 Starting Tom Cruise Running Analysis API...\n');
 
-    // Test PostgreSQL connection
+  // Start the Express server FIRST so Railway can connect
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('════════════════════════════════════════════════════');
+    console.log(`🎬 Server running on http://0.0.0.0:${PORT}`);
+    console.log(`📊 GraphQL endpoint: http://localhost:${PORT}/graphql`);
+    console.log(`💚 Health check: http://localhost:${PORT}/health`);
+    console.log('════════════════════════════════════════════════════\n');
+  });
+
+  // Now try to connect to databases (non-blocking for server startup)
+  try {
     console.log('📊 Connecting to PostgreSQL...');
     await pool.query('SELECT NOW()');
     console.log('✓ PostgreSQL connected successfully\n');
-
-    // Connect to MongoDB (optional, for future features)
-    try {
-      console.log('🍃 Connecting to MongoDB...');
-      await connectMongo();
-      console.log('✓ MongoDB connected successfully\n');
-    } catch (mongoError) {
-      console.warn('⚠️  MongoDB connection failed (optional service):', mongoError.message);
-      console.warn('   The API will work without MongoDB for now.\n');
-    }
-
-    // Start the Express server
-    app.listen(PORT, () => {
-      console.log('════════════════════════════════════════════════════');
-      console.log(`🎬 Server running on http://localhost:${PORT}`);
-      console.log(`📊 GraphQL endpoint: http://localhost:${PORT}/graphql`);
-      console.log(`💚 Health check: http://localhost:${PORT}/health`);
-      console.log('════════════════════════════════════════════════════\n');
-    });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
+    console.error('❌ PostgreSQL connection failed:', error.message);
+    console.error('   Server is running but database queries will fail.\n');
+  }
+
+  // Connect to MongoDB (optional, for future features)
+  try {
+    console.log('🍃 Connecting to MongoDB...');
+    await connectMongo();
+    console.log('✓ MongoDB connected successfully\n');
+  } catch (mongoError) {
+    console.warn('⚠️  MongoDB connection failed (optional service):', mongoError.message);
+    console.warn('   The API will work without MongoDB for now.\n');
   }
 }
 
