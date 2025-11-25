@@ -1,3 +1,25 @@
+// === DIAGNOSTIC LOGGING - REMOVE AFTER DEBUGGING ===
+console.log('=== BACKEND STARTUP ===');
+console.log('Time:', new Date().toISOString());
+console.log('Node version:', process.version);
+console.log('PORT env:', process.env.PORT);
+console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('=======================');
+
+process.on('uncaughtException', (err) => {
+  console.error('=== UNCAUGHT EXCEPTION ===');
+  console.error(err);
+  console.error('==========================');
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('=== UNHANDLED REJECTION ===');
+  console.error('Reason:', reason);
+  console.error('===========================');
+});
+// === END DIAGNOSTIC LOGGING ===
+
 require('dotenv').config();
 const express = require('express');
 const { createHandler } = require('graphql-http/lib/use/express');
@@ -157,12 +179,26 @@ async function startServer() {
   console.log('🚀 Starting Tom Cruise Running Analysis API...\n');
 
   // Start the Express server FIRST so Railway can connect
-  app.listen(PORT, '0.0.0.0', () => {
+  console.log('=== ATTEMPTING TO START SERVER ===');
+  console.log('Binding to PORT:', PORT);
+
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log('=== SERVER LISTENING ===');
+    console.log('Port:', PORT);
+    console.log('Address: 0.0.0.0');
     console.log('════════════════════════════════════════════════════');
     console.log(`🎬 Server running on http://0.0.0.0:${PORT}`);
     console.log(`📊 GraphQL endpoint: http://localhost:${PORT}/graphql`);
     console.log(`💚 Health check: http://localhost:${PORT}/health`);
     console.log('════════════════════════════════════════════════════\n');
+  });
+
+  server.on('error', (err) => {
+    console.error('=== SERVER ERROR ===');
+    console.error('Failed to start:', err.message);
+    console.error('Code:', err.code);
+    console.error('Full error:', err);
+    console.error('====================');
   });
 
   // Now try to connect to databases (non-blocking for server startup)
