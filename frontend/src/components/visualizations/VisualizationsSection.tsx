@@ -523,7 +523,7 @@ export const VisualizationsSection: React.FC = () => {
 
   // ========== CHART 7: Quality vs Distance Scatter ==========
   const scatterData = vizData.films
-    .filter((f) => f.totalRunningDistanceFeet > 0 && f.rottenTomatoesScore !== null)
+    .filter((f) => f.totalRunningDistanceFeet > 0 && f.rottenTomatoesScore != null)
     .map((f) => ({
       x: f.totalRunningDistanceFeet,
       y: f.rottenTomatoesScore,
