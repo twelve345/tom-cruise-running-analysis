@@ -9,6 +9,7 @@
     "dev": "nodemon index.js",
     "db:init": "node scripts/initDb.js",
     "db:seed": "node scripts/seedDb.js",
+    "db:seed-mongo": "node scripts/seedMongo.js",
     "db:setup": "npm run db:init && npm run db:seed",
     "db:migrate": "node scripts/migrate.js",
     "lint": "eslint .",

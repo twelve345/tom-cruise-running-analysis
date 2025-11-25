@@ -409,7 +409,7 @@ export const FilmographyExplorer: React.FC = () => {
 
                         {/* Running Instances */}
                         {film.runningInstancesCount > 0 && (
-                          <RunningInstancesSection filmId={film.id} />
+                          <RunningInstancesSection filmId={Number(film.id)} />
                         )}
                       </td>
                     </tr>
