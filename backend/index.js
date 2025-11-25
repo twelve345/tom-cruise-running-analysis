@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
-const allowedOrigins = [
+const _allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:4173',
   'https://tomcruiserunningtime.com',
@@ -152,15 +152,12 @@ app.use((err, req, res, _next) => {
   });
 });
 
-// Track database connection status for health checks
-let dbConnected = false;
-
 // Initialize connections and start server
 async function startServer() {
   console.log('🚀 Starting Tom Cruise Running Analysis API...\n');
 
   // Start the Express server FIRST so Railway can connect
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log('════════════════════════════════════════════════════');
     console.log(`🎬 Server running on http://0.0.0.0:${PORT}`);
     console.log(`📊 GraphQL endpoint: http://localhost:${PORT}/graphql`);
@@ -173,7 +170,6 @@ async function startServer() {
     console.log('📊 Connecting to PostgreSQL...');
     await pool.query('SELECT NOW()');
     console.log('✓ PostgreSQL connected successfully\n');
-    dbConnected = true;
   } catch (error) {
     console.error('❌ PostgreSQL connection failed:', error.message);
     console.error('   Server is running but database queries will fail.\n');
