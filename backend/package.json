@@ -12,6 +12,7 @@
     "db:seed-mongo": "node scripts/seedMongo.js",
     "db:setup": "npm run db:init && npm run db:seed",
     "db:migrate": "node scripts/migrate.js",
+    "schema:export": "node -e \"const{printSchema}=require('graphql');const s=require('./graphql/schema');console.log(printSchema(s))\" > ../frontend/schema.graphql",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest"

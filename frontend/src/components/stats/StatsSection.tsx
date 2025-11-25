@@ -1,10 +1,19 @@
 import React from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GET_FILM_STATS } from '../../graphql/queries';
-import type { GetFilmStatsResult } from '../../graphql/types';
+import { graphql } from '../../gql';
+
+const GetFilmStatsDocument = graphql(`
+  query GetFilmStats {
+    filmStats {
+      totalDistanceFeet
+      totalRunningTimeSeconds
+      careerMiles
+    }
+  }
+`);
 
 export const StatsSection: React.FC = () => {
-  const { loading, error, data } = useQuery<GetFilmStatsResult>(GET_FILM_STATS);
+  const { loading, error, data } = useQuery(GetFilmStatsDocument);
 
   if (loading) return <div className="text-center text-slate-400">Loading stats...</div>;
   if (error) return <div className="text-center text-red-400">Error loading stats</div>;

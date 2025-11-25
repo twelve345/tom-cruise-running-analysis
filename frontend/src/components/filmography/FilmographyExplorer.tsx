@@ -1,25 +1,84 @@
 import React, { useState } from 'react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
-import { GET_FILMS, GET_RUNNING_INSTANCES } from '../../graphql/queries';
+import { graphql } from '../../gql';
+import type { FilmSortField, SortOrder } from '../../gql/graphql';
 import { getCategory, getCategoryLabel } from '../../utils/distanceCategories';
-import type { GetFilmsResult, GetRunningInstancesResult, Film } from '../../graphql/types';
 
-type SortField =
-  | 'year'
-  | 'runtimeMinutes'
-  | 'totalRunningDistanceFeet'
-  | 'runningInstancesCount'
-  | 'cpiScore'
-  | 'rottenTomatoesScore';
-type SortOrder = 'ASC' | 'DESC';
+// Colocated GraphQL queries
+const GetFilmsDocument = graphql(`
+  query GetFilms($sortBy: FilmSortField, $sortOrder: SortOrder, $filter: FilmFilterInput) {
+    films(sortBy: $sortBy, sortOrder: $sortOrder, filter: $filter, limit: 100) {
+      id
+      title
+      year
+      runtimeMinutes
+      totalRunningDistanceFeet
+      totalRunningTimeSeconds
+      runningInstancesCount
+      runningDensity
+      cpiScore
+      rottenTomatoesScore
+      posterUrl
+      imdbId
+      tmdbId
+      rottenTomatoesUrl
+      wikipediaUrl
+      youtubeTrailerUrl
+      letterboxdUrl
+    }
+  }
+`);
+
+const GetRunningInstancesDocument = graphql(`
+  query GetRunningInstances($filmId: Int!, $limit: Int) {
+    runningInstances(filmId: $filmId, limit: $limit) {
+      id
+      rank
+      filmTitle
+      filmYear
+      sequenceNumber
+      scene {
+        context
+        timestampStart
+        timestampEnd
+        intensity
+        location {
+          setting
+          city
+          country
+        }
+      }
+      measurement {
+        distanceFeet
+        durationSeconds
+        confidence
+      }
+      media {
+        youtubeUrl
+        youtubeTimestamp
+      }
+      metadata {
+        behindTheScenes
+      }
+      tags
+      sources {
+        ranking {
+          provider
+          url
+          author
+        }
+      }
+    }
+  }
+`);
 
 export const FilmographyExplorer: React.FC = () => {
-  const [sortBy, setSortBy] = useState<SortField>('year');
+  const [sortBy, setSortBy] = useState<FilmSortField>('year');
   const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const { loading, error, data } = useQuery<GetFilmsResult>(GET_FILMS, {
+  const { loading, error, data } = useQuery(GetFilmsDocument, {
     variables: {
       sortBy,
       sortOrder,
@@ -29,7 +88,7 @@ export const FilmographyExplorer: React.FC = () => {
   if (loading) return <div className="text-center text-slate-400">Loading filmography...</div>;
   if (error) return <div className="text-center text-red-400">Error loading films</div>;
 
-  const handleSort = (field: SortField) => {
+  const handleSort = (field: FilmSortField) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
     } else {
@@ -49,7 +108,7 @@ export const FilmographyExplorer: React.FC = () => {
   };
 
   const filteredFilms =
-    data?.films.filter((film: Film) => {
+    data?.films.filter((film) => {
       if (filterCategory === 'all') return true;
       const category = getCategory(film.totalRunningDistanceFeet);
       return category === filterCategory;
@@ -71,7 +130,7 @@ export const FilmographyExplorer: React.FC = () => {
     );
   };
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const SortIcon = ({ field }: { field: FilmSortField }) => {
     if (sortBy !== field) {
       return <span className="text-slate-600">⇅</span>;
     }
@@ -173,7 +232,7 @@ export const FilmographyExplorer: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {filteredFilms.map((film: Film, index: number) => (
+              {filteredFilms.map((film, index: number) => (
                 <React.Fragment key={film.id}>
                   {/* Main Row */}
                   <tr
@@ -443,8 +502,7 @@ interface RunningInstancesSectionProps {
 }
 
 const RunningInstancesSection: React.FC<RunningInstancesSectionProps> = ({ filmId }) => {
-  const [getRunningInstances, { loading, data, error }] =
-    useLazyQuery<GetRunningInstancesResult>(GET_RUNNING_INSTANCES);
+  const [getRunningInstances, { loading, data, error }] = useLazyQuery(GetRunningInstancesDocument);
 
   // Fetch instances on mount
   React.useEffect(() => {

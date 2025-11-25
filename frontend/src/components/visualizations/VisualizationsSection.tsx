@@ -19,18 +19,58 @@ import {
   type ScriptableContext,
 } from 'chart.js';
 import { Bar, Line, Scatter, Doughnut } from 'react-chartjs-2';
-import {
-  GET_VISUALIZATION_DATA,
-  GET_TOP_RUNNING_FILMS,
-  GET_TOP_CPI_FILMS,
-} from '../../graphql/queries';
+import { graphql } from '../../gql';
 import { getCategory } from '../../utils/distanceCategories';
-import type {
-  GetVisualizationDataResult,
-  GetTopRunningFilmsResult,
-  GetTopCpiFilmsResult,
-  Film,
-} from '../../graphql/types';
+
+// Colocated GraphQL queries
+const GetVisualizationDataDocument = graphql(`
+  query GetVisualizationData {
+    yearlyStats {
+      year
+      totalDistanceFeet
+      filmCount
+      films {
+        title
+        totalRunningDistanceFeet
+      }
+    }
+    films(limit: 100) {
+      id
+      title
+      year
+      totalRunningDistanceFeet
+      rottenTomatoesScore
+      cpiScore
+      runningDensity
+      runtimeMinutes
+    }
+  }
+`);
+
+const GetTopRunningFilmsDocument = graphql(`
+  query GetTopRunningFilms($limit: Int) {
+    topRunningFilms(limit: $limit) {
+      id
+      title
+      year
+      totalRunningDistanceFeet
+      rottenTomatoesScore
+    }
+  }
+`);
+
+const GetTopCpiFilmsDocument = graphql(`
+  query GetTopCpiFilms($limit: Int) {
+    topCpiFilms(limit: $limit) {
+      id
+      title
+      year
+      totalRunningDistanceFeet
+      rottenTomatoesScore
+      cpiScore
+    }
+  }
+`);
 
 // Register all Chart.js components
 ChartJS.register(
@@ -98,19 +138,19 @@ export const VisualizationsSection: React.FC = () => {
     loading: loadingViz,
     error: errorViz,
     data: vizData,
-  } = useQuery<GetVisualizationDataResult>(GET_VISUALIZATION_DATA);
+  } = useQuery(GetVisualizationDataDocument);
   const {
     loading: loadingTop,
     error: errorTop,
     data: topData,
-  } = useQuery<GetTopRunningFilmsResult>(GET_TOP_RUNNING_FILMS, {
+  } = useQuery(GetTopRunningFilmsDocument, {
     variables: { limit: 10 },
   });
   const {
     loading: loadingCpi,
     error: errorCpi,
     data: cpiData,
-  } = useQuery<GetTopCpiFilmsResult>(GET_TOP_CPI_FILMS, {
+  } = useQuery(GetTopCpiFilmsDocument, {
     variables: { limit: 10 },
   });
 
@@ -128,17 +168,17 @@ export const VisualizationsSection: React.FC = () => {
 
   // ========== CHART 1: Running Over Time (Original) ==========
   const runningMovies = [...vizData.films]
-    .filter((m: Film) => m.totalRunningDistanceFeet > 0)
-    .sort((a: Film, b: Film) => a.year - b.year);
+    .filter((m) => m.totalRunningDistanceFeet > 0)
+    .sort((a, b) => a.year - b.year);
 
   const runningOverTimeData = {
     labels: runningMovies.map(
-      (m: Film) => `${m.year} - ${m.title.substring(0, 15)}${m.title.length > 15 ? '...' : ''}`
+      (m) => `${m.year} - ${m.title.substring(0, 15)}${m.title.length > 15 ? '...' : ''}`
     ),
     datasets: [
       {
         label: 'Running Distance (feet)',
-        data: runningMovies.map((m: Film) => m.totalRunningDistanceFeet),
+        data: runningMovies.map((m) => m.totalRunningDistanceFeet),
         backgroundColor: COLORS.primaryLight,
         borderColor: COLORS.primaryBorder,
         borderWidth: 1,
@@ -198,7 +238,7 @@ export const VisualizationsSection: React.FC = () => {
     else if (category === 'middle') label = 'Middle-Distance (501-1000 ft)';
     else if (category === 'full-tom') label = 'Full Tom (1001+ ft)';
 
-    if (label && movie.rottenTomatoesScore !== null) {
+    if (label && movie.rottenTomatoesScore != null) {
       ratingData[label].push(movie.rottenTomatoesScore);
     }
   });
@@ -248,12 +288,12 @@ export const VisualizationsSection: React.FC = () => {
   // ========== CHART 3: Top 10 Running Films Leaderboard ==========
   const topRunningData = {
     labels: topData.topRunningFilms.map(
-      (f: Film) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
+      (f) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
     ),
     datasets: [
       {
         label: 'Running Distance (feet)',
-        data: topData.topRunningFilms.map((f: Film) => f.totalRunningDistanceFeet),
+        data: topData.topRunningFilms.map((f) => f.totalRunningDistanceFeet),
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primaryBorder,
         borderWidth: 1,
@@ -299,12 +339,12 @@ export const VisualizationsSection: React.FC = () => {
   // ========== CHART 4: Top 10 CPI Leaderboard ==========
   const topCpiChartData = {
     labels: cpiData.topCpiFilms.map(
-      (f: Film) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
+      (f) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
     ),
     datasets: [
       {
         label: 'CPI Score',
-        data: cpiData.topCpiFilms.map((f: Film) => f.cpiScore),
+        data: cpiData.topCpiFilms.map((f) => f.cpiScore),
         backgroundColor: COLORS.secondary,
         borderColor: COLORS.secondary.replace('0.8', '1'),
         borderWidth: 1,
