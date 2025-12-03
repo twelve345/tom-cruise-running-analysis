@@ -18,9 +18,16 @@ import {
   type TooltipItem,
   type ScriptableContext,
 } from 'chart.js';
-import { Bar, Line, Scatter, Doughnut } from 'react-chartjs-2';
+import { Bar, Line, Scatter } from 'react-chartjs-2';
 import { graphql } from '../../gql';
 import { getCategory } from '../../utils/distanceCategories';
+import type { FilterState } from '../../types/filters';
+
+// New Visx Charts
+import { FilmographyBreakdownChart } from './charts/FilmographyBreakdownChart';
+import { TopRunningFilmsChart } from './charts/TopRunningFilmsChart';
+import { CPILeaderboardChart } from './charts/CPILeaderboardChart';
+import { SprintIntensityChart } from './charts/SprintIntensityChart';
 
 // Colocated GraphQL queries
 const GetVisualizationDataDocument = graphql(`
@@ -132,7 +139,13 @@ const crosshairPlugin = {
   },
 };
 
-export const VisualizationsSection: React.FC = () => {
+interface VisualizationsSectionProps {
+  filters?: FilterState;
+}
+
+export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
+  filters: _filters,
+}) => {
   // Fetch data from GraphQL
   const {
     loading: loadingViz,
@@ -285,113 +298,13 @@ export const VisualizationsSection: React.FC = () => {
     },
   };
 
-  // ========== CHART 3: Top 10 Running Films Leaderboard ==========
-  const topRunningData = {
-    labels: topData.topRunningFilms.map(
-      (f) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
-    ),
-    datasets: [
-      {
-        label: 'Running Distance (feet)',
-        data: topData.topRunningFilms.map((f) => f.totalRunningDistanceFeet),
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primaryBorder,
-        borderWidth: 1,
-      },
-    ],
-  };
+  // ========== CHART 3: Top 10 Running Films Leaderboard (Visx) ==========
+  // Handled by TopRunningFilmsChart component
 
-  const topRunningOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y' as const,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      y: {
-        ticks: { color: '#cbd5e1', font: { size: 12 } },
-        grid: { display: false },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'bar'>[]) {
-            const film = topData.topRunningFilms[context[0].dataIndex];
-            return film.title;
-          },
-          label: function (context: TooltipItem<'bar'>) {
-            const film = topData.topRunningFilms[context.dataIndex];
-            return [`Distance: ${context.parsed.x} feet`, `RT Score: ${film.rottenTomatoesScore}%`];
-          },
-        },
-      },
-    },
-  };
+  // ========== CHART 4: Top 10 CPI Leaderboard (Visx) ==========
+  // Handled by CPILeaderboardChart component
 
-  // ========== CHART 4: Top 10 CPI Leaderboard ==========
-  const topCpiChartData = {
-    labels: cpiData.topCpiFilms.map(
-      (f) => `${f.title.substring(0, 20)}${f.title.length > 20 ? '...' : ''} (${f.year})`
-    ),
-    datasets: [
-      {
-        label: 'CPI Score',
-        data: cpiData.topCpiFilms.map((f) => f.cpiScore),
-        backgroundColor: COLORS.secondary,
-        borderColor: COLORS.secondary.replace('0.8', '1'),
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const topCpiOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y' as const,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      y: {
-        ticks: { color: '#cbd5e1', font: { size: 12 } },
-        grid: { display: false },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'bar'>[]) {
-            const film = cpiData.topCpiFilms[context[0].dataIndex];
-            return film.title;
-          },
-          label: function (context: TooltipItem<'bar'>) {
-            const film = cpiData.topCpiFilms[context.dataIndex];
-            return [
-              `CPI: ${film.cpiScore ? film.cpiScore.toFixed(2) : 'N/A'}`,
-              `Distance: ${film.totalRunningDistanceFeet} feet`,
-              `RT Score: ${film.rottenTomatoesScore}%`,
-            ];
-          },
-        },
-      },
-    },
-  };
-
-  // ========== CHART 5: Film Category Distribution (Pie) ==========
+  // ========== CHART 5: Film Category Distribution (Visx) ==========
   const categoryCounts = {
     'No Run': 0,
     'Short Sprint': 0,
@@ -407,46 +320,10 @@ export const VisualizationsSection: React.FC = () => {
     else if (category === 'full-tom') categoryCounts['Full Tom']++;
   });
 
-  const categoryPieData = {
-    labels: Object.keys(categoryCounts).map(
-      (key) => `${key} (${categoryCounts[key as keyof typeof categoryCounts]} films)`
-    ),
-    datasets: [
-      {
-        data: Object.values(categoryCounts),
-        backgroundColor: CATEGORY_COLORS,
-        borderColor: CATEGORY_COLORS.map((c) => c.replace('0.8', '1')),
-        borderWidth: 2,
-      },
-    ],
-  };
-
-  const categoryPieOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    plugins: {
-      legend: {
-        position: 'right' as const,
-        labels: {
-          color: '#cbd5e1',
-          font: { size: 13 },
-          padding: 15,
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: function (context: TooltipItem<'doughnut'>) {
-            const total = Object.values(categoryCounts).reduce((a: number, b: number) => a + b, 0);
-            const percentage = ((context.parsed / total) * 100).toFixed(1);
-            return `${context.label}: ${percentage}%`;
-          },
-        },
-      },
-    },
-  };
+  const filmographyBreakdownData = Object.keys(categoryCounts).map((key) => ({
+    label: key,
+    count: categoryCounts[key as keyof typeof categoryCounts],
+  }));
 
   // ========== CHART 6: Cumulative Career Distance (Line) ==========
   const filmsByYear = [...vizData.films].sort((a, b) => a.year - b.year);
@@ -758,64 +635,12 @@ export const VisualizationsSection: React.FC = () => {
     },
   };
 
-  // ========== CHART 10: Running Density Analysis ==========
+  // ========== CHART 10: Running Density Analysis (Visx) ==========
+  // Handled by SprintIntensityChart component
   const densityFilms = [...vizData.films]
     .filter((f) => f.runningDensity && f.runningDensity > 0)
     .sort((a, b) => (b.runningDensity ?? 0) - (a.runningDensity ?? 0))
     .slice(0, 15);
-
-  const densityChartData = {
-    labels: densityFilms.map(
-      (f) => `${f.title.substring(0, 18)}${f.title.length > 18 ? '...' : ''}`
-    ),
-    datasets: [
-      {
-        label: 'Running Density (feet/minute)',
-        data: densityFilms.map((f) => f.runningDensity),
-        backgroundColor: COLORS.tertiary,
-        borderColor: COLORS.tertiary.replace('0.8', '1'),
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const densityOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y' as const,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      y: {
-        ticks: { color: '#cbd5e1', font: { size: 11 } },
-        grid: { display: false },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'bar'>[]) {
-            const film = densityFilms[context[0].dataIndex];
-            return `${film.title} (${film.year})`;
-          },
-          label: function (context: TooltipItem<'bar'>) {
-            const film = densityFilms[context.dataIndex];
-            return [
-              `Density: ${(context.parsed.x ?? 0).toFixed(2)} feet/min`,
-              `Total Distance: ${film.totalRunningDistanceFeet} feet`,
-            ];
-          },
-        },
-      },
-    },
-  };
 
   // ========== CHART 11: Mission: Impossible Franchise Focus ==========
   const missionFilms = [...vizData.films]
@@ -964,8 +789,13 @@ export const VisualizationsSection: React.FC = () => {
           The films where Tom Cruise ran the most. Mission: Impossible franchise dominates the
           leaderboard.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[500px]">
-          <Bar data={topRunningData} options={topRunningOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <TopRunningFilmsChart
+            data={topData.topRunningFilms.map((f) => ({
+              ...f,
+              rottenTomatoesScore: f.rottenTomatoesScore ?? undefined,
+            }))}
+          />
         </div>
       </div>
 
@@ -978,8 +808,14 @@ export const VisualizationsSection: React.FC = () => {
           CPI combines running distance with film quality. The formula: (Distance ÷ Runtime) × (RT
           Score ÷ 100). These are Tom's most complete performances.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[500px]">
-          <Bar data={topCpiChartData} options={topCpiOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <CPILeaderboardChart
+            data={cpiData.topCpiFilms.map((f) => ({
+              ...f,
+              cpiScore: f.cpiScore ?? undefined,
+              rottenTomatoesScore: f.rottenTomatoesScore ?? undefined,
+            }))}
+          />
         </div>
       </div>
 
@@ -991,8 +827,8 @@ export const VisualizationsSection: React.FC = () => {
         <p className="text-center text-slate-400 mb-6">
           Distribution of Tom's {vizData.films.length} films across running categories.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[450px]">
-          <Doughnut data={categoryPieData} options={categoryPieOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <FilmographyBreakdownChart data={filmographyBreakdownData} />
         </div>
       </div>
 
@@ -1061,8 +897,13 @@ export const VisualizationsSection: React.FC = () => {
           Running density measures feet per minute. These films pack the most running into their
           runtime.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[550px]">
-          <Bar data={densityChartData} options={densityOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <SprintIntensityChart
+            data={densityFilms.map((f) => ({
+              ...f,
+              runningDensity: f.runningDensity ?? undefined,
+            }))}
+          />
         </div>
       </div>
 

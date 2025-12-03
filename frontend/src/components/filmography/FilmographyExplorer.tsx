@@ -3,6 +3,7 @@ import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { graphql } from '../../gql';
 import type { FilmSortField, SortOrder } from '../../gql/graphql';
 import { getCategory, getCategoryLabel } from '../../utils/distanceCategories';
+import type { FilterState } from '../../types/filters';
 
 // Colocated GraphQL queries
 const GetFilmsDocument = graphql(`
@@ -72,10 +73,13 @@ const GetRunningInstancesDocument = graphql(`
   }
 `);
 
-export const FilmographyExplorer: React.FC = () => {
+interface FilmographyExplorerProps {
+  filters: FilterState;
+}
+
+export const FilmographyExplorer: React.FC<FilmographyExplorerProps> = ({ filters }) => {
   const [sortBy, setSortBy] = useState<FilmSortField>('year');
   const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const { loading, error, data } = useQuery(GetFilmsDocument, {
@@ -109,9 +113,29 @@ export const FilmographyExplorer: React.FC = () => {
 
   const filteredFilms =
     data?.films.filter((film) => {
-      if (filterCategory === 'all') return true;
-      const category = getCategory(film.totalRunningDistanceFeet);
-      return category === filterCategory;
+      // Category Filter
+      if (filters.category !== 'All') {
+        const category = getCategory(film.totalRunningDistanceFeet);
+        const label = getCategoryLabel(category);
+        if (label !== filters.category) return false;
+      }
+
+      // Year Range Filter
+      if (film.year < filters.yearRange[0] || film.year > filters.yearRange[1]) {
+        return false;
+      }
+
+      // RT Score Filter
+      if (film.rottenTomatoesScore !== null && film.rottenTomatoesScore !== undefined) {
+        if (
+          film.rottenTomatoesScore < filters.rtScore[0] ||
+          film.rottenTomatoesScore > filters.rtScore[1]
+        ) {
+          return false;
+        }
+      }
+
+      return true;
     }) || [];
 
   const getCategoryBadge = (distance: number) => {
@@ -144,24 +168,6 @@ export const FilmographyExplorer: React.FC = () => {
         <p className="text-center text-slate-400 mb-6">
           Every Tom Cruise film with running analytics. Click any row to expand for details.
         </p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center justify-center">
-        <label className="text-slate-300">
-          Filter by Category:
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="ml-2 bg-slate-800 text-white border border-slate-700 rounded px-3 py-2"
-          >
-            <option value="all">All Films ({data?.films.length ?? 0})</option>
-            <option value="full-tom">Full Tom (1001+ ft)</option>
-            <option value="middle">Middle-Distance (501-1000 ft)</option>
-            <option value="sprint">Short Sprint (1-500 ft)</option>
-            <option value="none">No Run (0 ft)</option>
-          </select>
-        </label>
       </div>
 
       {/* Table */}
