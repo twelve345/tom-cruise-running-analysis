@@ -12,7 +12,7 @@ GraphQL API for the Tom Cruise Running Analysis platform.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 24 LTS (version pinned in the repo-root `.nvmrc`)
 - MongoDB (if running locally)
 
 ### Installation

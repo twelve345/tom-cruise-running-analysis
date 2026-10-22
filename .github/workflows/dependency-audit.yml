@@ -1,0 +1,37 @@
+name: Dependency Audit
+
+# Dependency CVE scan, following the Abacus fleet pattern (abacus-fleet-control
+# conventions §16). Fails on high/critical advisories so a disclosure in a pinned
+# dependency is caught in CI rather than in production. It complements
+# .github/dependabot.yml, which opens the bump PRs. The weekly schedule matters: a CVE
+# can be disclosed against an already-pinned dependency with no new commit to trigger on.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      # `npm audit` reads the root package-lock.json (which covers both workspaces) and
+      # queries the registry's advisory endpoint, so no install is needed.
+      # `--audit-level=high` fails on high and critical only; low and moderate are reported.
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
