@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tooltip, defaultStyles } from '@visx/tooltip';
+import { TooltipWithBounds, defaultStyles } from '@visx/tooltip';
 import { colors } from './chartTheme';
 
 interface ChartTooltipProps {
@@ -10,8 +10,7 @@ interface ChartTooltipProps {
 
 export const ChartTooltip: React.FC<ChartTooltipProps> = ({ left, top, children }) => {
   return (
-    <Tooltip
-      key={Math.random()}
+    <TooltipWithBounds
       top={top}
       left={left}
       style={{
@@ -29,6 +28,6 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({ left, top, children 
       }}
     >
       {children}
-    </Tooltip>
+    </TooltipWithBounds>
   );
 };

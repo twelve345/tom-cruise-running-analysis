@@ -6,7 +6,8 @@ import { ChartTooltip } from '../shared/ChartTooltip';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { AnimatedBar } from '../shared/AnimatedBar';
 import { useTooltip } from '@visx/tooltip';
-import { colors } from '../shared/chartTheme';
+import { getCategoryColor } from '../shared/chartTheme';
+import { getCategory } from '../../../utils/distanceCategories';
 
 interface FilmData {
   title: string;
@@ -89,14 +90,9 @@ export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }
                       y={barY ?? 0}
                       width={barWidth}
                       height={barHeight}
-                      fill={colors.amber[500]} // Or secondary color (blue) as per original? Original used secondary.
-                      // Let's use blue for CPI to distinguish from Distance
-                      // colors.slate[400] is blue-ish in my theme? No slate is grey.
-                      // I should add blue to my theme or use hex.
-                      // Original used 'rgba(59, 130, 246, 0.8)' which is blue-500.
-                      // I'll use a hardcoded blue for now or add to theme later.
-                      // Let's use '#3b82f6' (blue-500)
+                      fill={getCategoryColor(getCategory(d.totalRunningDistanceFeet))}
                       delay={i * 50}
+                      isHorizontal={true}
                       onMouseLeave={() => hideTooltip()}
                       onMouseEnter={(event) => {
                         showTooltip({

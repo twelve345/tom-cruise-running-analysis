@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { graphql } from '../../gql';
 import type { FilmSortField, SortOrder } from '../../gql/graphql';
-import { getCategory, getCategoryLabel } from '../../utils/distanceCategories';
+import { getCategory, getCategoryLabel, FILTER_CATEGORY_MAP } from '../../utils/distanceCategories';
+import { getCategoryColor } from '../visualizations/shared/chartTheme';
 import type { FilterState } from '../../types/filters';
 
 // Colocated GraphQL queries
@@ -116,8 +117,8 @@ export const FilmographyExplorer: React.FC<FilmographyExplorerProps> = ({ filter
       // Category Filter
       if (filters.category !== 'All') {
         const category = getCategory(film.totalRunningDistanceFeet);
-        const label = getCategoryLabel(category);
-        if (label !== filters.category) return false;
+        const targetCategory = FILTER_CATEGORY_MAP[filters.category];
+        if (category !== targetCategory) return false;
       }
 
       // Year Range Filter
@@ -140,15 +141,14 @@ export const FilmographyExplorer: React.FC<FilmographyExplorerProps> = ({ filter
 
   const getCategoryBadge = (distance: number) => {
     const category = getCategory(distance);
-    const colors = {
-      none: 'bg-slate-600 text-slate-200',
-      sprint: 'bg-blue-600 text-white',
-      middle: 'bg-yellow-600 text-white',
-      'full-tom': 'bg-amber-600 text-white',
-    };
+    const color = getCategoryColor(category);
     const label = getCategoryLabel(category);
+
     return (
-      <span className={`text-xs px-2 py-1 rounded ${colors[category as keyof typeof colors]}`}>
+      <span
+        className="text-xs px-2 py-1 rounded text-white font-medium shadow-sm"
+        style={{ backgroundColor: color }}
+      >
         {label}
       </span>
     );

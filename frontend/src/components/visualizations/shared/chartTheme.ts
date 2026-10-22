@@ -27,6 +27,32 @@ export const colors = {
     900: '#78350f',
     950: '#451a03',
   },
+  blue: {
+    50: '#eff6ff',
+    100: '#dbeafe',
+    200: '#bfdbfe',
+    300: '#93c5fd',
+    400: '#60a5fa',
+    500: '#3b82f6',
+    600: '#2563eb',
+    700: '#1d4ed8',
+    800: '#1e40af',
+    900: '#1e3a8a',
+    950: '#172554',
+  },
+  violet: {
+    50: '#f5f3ff',
+    100: '#ede9fe',
+    200: '#ddd6fe',
+    300: '#c4b5fd',
+    400: '#a78bfa',
+    500: '#8b5cf6',
+    600: '#7c3aed',
+    700: '#6d28d9',
+    800: '#5b21b6',
+    900: '#4c1d95',
+    950: '#2e1065',
+  },
 };
 
 export const chartTheme = buildChartTheme({
@@ -73,4 +99,16 @@ export const axisStyles = {
       textAnchor: 'middle' as const,
     },
   },
+};
+
+export const getCategoryColor = (category: string): string => {
+  // Normalize string to handle both internal keys and display labels
+  const normalized = category.toLowerCase();
+
+  if (normalized.includes('full') || normalized === 'full-tom') return '#f97316'; // Orange-500
+  if (normalized.includes('middle')) return '#eab308'; // Yellow-500
+  if (normalized.includes('short') || normalized.includes('sprint')) return '#3b82f6'; // Blue-500
+  if (normalized.includes('no') || normalized === 'none') return colors.slate[600];
+
+  return colors.slate[500];
 };

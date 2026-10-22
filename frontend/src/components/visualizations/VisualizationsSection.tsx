@@ -1,33 +1,23 @@
 import React from 'react';
 import { useQuery } from '@apollo/client/react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-  type Chart,
-  type ChartEvent,
-  type ActiveElement,
-  type TooltipItem,
-  type ScriptableContext,
-} from 'chart.js';
-import { Bar, Line, Scatter } from 'react-chartjs-2';
 import { graphql } from '../../gql';
 import { getCategory } from '../../utils/distanceCategories';
 import type { FilterState } from '../../types/filters';
+import { INITIAL_FILTERS } from '../../types/filters';
+import { useFilteredChartData } from './hooks/useFilteredChartData';
 
-// New Visx Charts
+// Visx Charts
 import { FilmographyBreakdownChart } from './charts/FilmographyBreakdownChart';
+import { RunningOverTimeChart } from './charts/RunningOverTimeChart';
+import { RunVsRatingsChart } from './charts/RunVsRatingsChart';
+import { DecadeBreakdownChart } from './charts/DecadeBreakdownChart';
+import { MissionImpossibleChart } from './charts/MissionImpossibleChart';
+import { QualityVsDistanceChart } from './charts/QualityVsDistanceChart';
+import { CPIPerformanceMap } from './charts/CPIPerformanceMap';
 import { TopRunningFilmsChart } from './charts/TopRunningFilmsChart';
 import { CPILeaderboardChart } from './charts/CPILeaderboardChart';
 import { SprintIntensityChart } from './charts/SprintIntensityChart';
+import { CumulativeDistanceChart } from './charts/CumulativeDistanceChart';
 
 // Colocated GraphQL queries
 const GetVisualizationDataDocument = graphql(`
@@ -54,97 +44,12 @@ const GetVisualizationDataDocument = graphql(`
   }
 `);
 
-const GetTopRunningFilmsDocument = graphql(`
-  query GetTopRunningFilms($limit: Int) {
-    topRunningFilms(limit: $limit) {
-      id
-      title
-      year
-      totalRunningDistanceFeet
-      rottenTomatoesScore
-    }
-  }
-`);
-
-const GetTopCpiFilmsDocument = graphql(`
-  query GetTopCpiFilms($limit: Int) {
-    topCpiFilms(limit: $limit) {
-      id
-      title
-      year
-      totalRunningDistanceFeet
-      rottenTomatoesScore
-      cpiScore
-    }
-  }
-`);
-
-// Register all Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
-
-// Common chart colors
-const COLORS = {
-  primary: 'rgba(245, 158, 11, 0.8)',
-  primaryLight: 'rgba(245, 158, 11, 0.6)',
-  primaryBorder: 'rgba(251, 191, 36, 1)',
-  secondary: 'rgba(59, 130, 246, 0.8)',
-  secondaryLight: 'rgba(59, 130, 246, 0.6)',
-  tertiary: 'rgba(234, 179, 8, 0.8)',
-  quaternary: 'rgba(139, 92, 246, 0.8)',
-  slate: 'rgba(100, 116, 139, 0.6)',
-  success: 'rgba(34, 197, 94, 0.8)',
-  danger: 'rgba(239, 68, 68, 0.8)',
-};
-
-const CATEGORY_COLORS = [
-  'rgba(100, 116, 139, 0.8)', // No Run
-  'rgba(59, 130, 246, 0.8)', // Short Sprint
-  'rgba(234, 179, 8, 0.8)', // Middle-Distance
-  'rgba(245, 158, 11, 0.9)', // Full Tom
-];
-
-// Custom crosshair plugin for vertical line on hover
-const crosshairPlugin = {
-  id: 'crosshair',
-  afterDatasetsDraw(chart: Chart) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tooltip = chart.tooltip as any;
-    if (tooltip?._active?.length) {
-      const ctx = chart.ctx;
-      const activePoint = tooltip._active[0];
-      const x = activePoint.element.x;
-      const topY = chart.scales.y.top;
-      const bottomY = chart.scales.y.bottom;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x, topY);
-      ctx.lineTo(x, bottomY);
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.stroke();
-      ctx.restore();
-    }
-  },
-};
-
 interface VisualizationsSectionProps {
   filters?: FilterState;
 }
 
 export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
-  filters: _filters,
+  filters = INITIAL_FILTERS,
 }) => {
   // Fetch data from GraphQL
   const {
@@ -152,157 +57,22 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
     error: errorViz,
     data: vizData,
   } = useQuery(GetVisualizationDataDocument);
-  const {
-    loading: loadingTop,
-    error: errorTop,
-    data: topData,
-  } = useQuery(GetTopRunningFilmsDocument, {
-    variables: { limit: 10 },
-  });
-  const {
-    loading: loadingCpi,
-    error: errorCpi,
-    data: cpiData,
-  } = useQuery(GetTopCpiFilmsDocument, {
-    variables: { limit: 10 },
-  });
 
-  if (loadingViz || loadingTop || loadingCpi) {
+  // Apply filters to all data
+  // Must be called unconditionally to avoid "Rendered more hooks than previous render" error
+  const filteredFilms = useFilteredChartData(vizData?.films ?? [], filters);
+
+  if (loadingViz) {
     return <div className="text-center text-slate-400">Loading charts...</div>;
   }
 
-  if (errorViz || errorTop || errorCpi) {
+  if (errorViz) {
     return <div className="text-center text-red-400">Error loading charts</div>;
   }
 
-  if (!vizData?.films || !topData?.topRunningFilms || !cpiData?.topCpiFilms) {
+  if (!vizData?.films) {
     return null;
   }
-
-  // ========== CHART 1: Running Over Time (Original) ==========
-  const runningMovies = [...vizData.films]
-    .filter((m) => m.totalRunningDistanceFeet > 0)
-    .sort((a, b) => a.year - b.year);
-
-  const runningOverTimeData = {
-    labels: runningMovies.map(
-      (m) => `${m.year} - ${m.title.substring(0, 15)}${m.title.length > 15 ? '...' : ''}`
-    ),
-    datasets: [
-      {
-        label: 'Running Distance (feet)',
-        data: runningMovies.map((m) => m.totalRunningDistanceFeet),
-        backgroundColor: COLORS.primaryLight,
-        borderColor: COLORS.primaryBorder,
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const runningOverTimeOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      x: {
-        ticks: {
-          color: '#94a3b8',
-          maxRotation: 90,
-          minRotation: 70,
-          autoSkip: true,
-          maxTicksLimit: 20,
-        },
-        grid: { color: '#334155' },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'bar'>[]) {
-            const movie = runningMovies[context[0].dataIndex];
-            return `${movie.title} (${movie.year})`;
-          },
-        },
-      },
-    },
-  };
-
-  // ========== CHART 2: Run vs Ratings (Original) ==========
-  const ratingData: Record<string, number[]> = {
-    'No Run (0 ft)': [],
-    'Short Sprint (1-500 ft)': [],
-    'Middle-Distance (501-1000 ft)': [],
-    'Full Tom (1001+ ft)': [],
-  };
-
-  vizData.films.forEach((movie) => {
-    const category = getCategory(movie.totalRunningDistanceFeet);
-    let label = '';
-    if (category === 'none') label = 'No Run (0 ft)';
-    else if (category === 'sprint') label = 'Short Sprint (1-500 ft)';
-    else if (category === 'middle') label = 'Middle-Distance (501-1000 ft)';
-    else if (category === 'full-tom') label = 'Full Tom (1001+ ft)';
-
-    if (label && movie.rottenTomatoesScore != null) {
-      ratingData[label].push(movie.rottenTomatoesScore);
-    }
-  });
-
-  const avgScores = Object.keys(ratingData).map((key) => {
-    const scores = ratingData[key];
-    return scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-  });
-
-  const ratingsChartData = {
-    labels: Object.keys(ratingData),
-    datasets: [
-      {
-        label: 'Average Tomatometer Score',
-        data: avgScores,
-        backgroundColor: CATEGORY_COLORS,
-        borderColor: CATEGORY_COLORS.map((c) => c.replace('0.8', '1')),
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const ratingsChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y' as const,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        max: 100,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      y: {
-        ticks: { color: '#cbd5e1', font: { size: 14 } },
-        grid: { display: false },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-    },
-  };
-
-  // ========== CHART 3: Top 10 Running Films Leaderboard (Visx) ==========
-  // Handled by TopRunningFilmsChart component
-
-  // ========== CHART 4: Top 10 CPI Leaderboard (Visx) ==========
-  // Handled by CPILeaderboardChart component
 
   // ========== CHART 5: Film Category Distribution (Visx) ==========
   const categoryCounts = {
@@ -312,7 +82,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
     'Full Tom': 0,
   };
 
-  vizData.films.forEach((movie) => {
+  filteredFilms.forEach((movie) => {
     const category = getCategory(movie.totalRunningDistanceFeet);
     if (category === 'none') categoryCounts['No Run']++;
     else if (category === 'sprint') categoryCounts['Short Sprint']++;
@@ -325,434 +95,25 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
     count: categoryCounts[key as keyof typeof categoryCounts],
   }));
 
-  // ========== CHART 6: Cumulative Career Distance (Line) ==========
-  const filmsByYear = [...vizData.films].sort((a, b) => a.year - b.year);
-  const cumulativeData: { year: number; distance: number }[] = [];
-  let runningTotal = 0;
-
-  filmsByYear.forEach((film) => {
-    runningTotal += film.totalRunningDistanceFeet;
-    cumulativeData.push({ year: film.year, distance: runningTotal });
-  });
-
-  const cumulativeChartData = {
-    labels: cumulativeData.map((d) => d.year),
-    datasets: [
-      {
-        label: 'Cumulative Distance (feet)',
-        data: cumulativeData.map((d) => d.distance),
-        borderColor: COLORS.primary,
-        backgroundColor: COLORS.primaryLight,
-        tension: 0.4,
-        fill: true,
-        pointRadius: 3,
-        pointHoverRadius: 6,
-      },
-    ],
-  };
-
-  const cumulativeOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    interaction: {
-      mode: 'index' as const,
-      intersect: false,
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: '#94a3b8',
-          callback: function (value: string | number) {
-            return typeof value === 'number' && value >= 1000
-              ? (value / 1000).toFixed(1) + 'k'
-              : value;
-          },
-        },
-        grid: { color: '#334155' },
-      },
-      x: {
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'line'>[]) {
-            const year = cumulativeData[context[0].dataIndex].year;
-            const film = filmsByYear.find((f) => f.year === year);
-            return `${year} - ${film?.title || ''}`;
-          },
-          label: function (context: TooltipItem<'line'>) {
-            const feet = context.parsed.y ?? 0;
-            const miles = (feet / 5280).toFixed(2);
-            return [`Cumulative: ${feet.toLocaleString()} feet`, `Career Total: ${miles} miles`];
-          },
-        },
-      },
-    },
-  };
-
-  // ========== CHART 7: Quality vs Distance Scatter ==========
-  const scatterData = vizData.films
-    .filter((f) => f.totalRunningDistanceFeet > 0 && f.rottenTomatoesScore != null)
-    .map((f) => ({
-      x: f.totalRunningDistanceFeet,
-      y: f.rottenTomatoesScore,
-      title: f.title,
-      year: f.year,
-    }));
-
-  const qualityScatterData = {
-    datasets: [
-      {
-        label: 'Films',
-        data: scatterData,
-        backgroundColor: COLORS.secondary,
-        borderColor: COLORS.secondary.replace('0.8', '1'),
-        pointRadius: 6,
-        pointHoverRadius: 9,
-      },
-    ],
-  };
-
-  const qualityScatterOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: 'Running Distance (feet)',
-          color: '#cbd5e1',
-          font: { size: 14 },
-        },
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      y: {
-        title: {
-          display: true,
-          text: 'Rotten Tomatoes Score (%)',
-          color: '#cbd5e1',
-          font: { size: 14 },
-        },
-        beginAtZero: true,
-        max: 100,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'scatter'>[]) {
-            const point = context[0].raw as { title: string; year: number };
-            return `${point.title} (${point.year})`;
-          },
-          label: function (context: TooltipItem<'scatter'>) {
-            return [`Distance: ${context.parsed.x} feet`, `RT Score: ${context.parsed.y}%`];
-          },
-        },
-      },
-    },
-  };
-
-  // ========== CHART 8: CPI Scatter Plot ==========
-  const cpiScatterData = vizData.films
-    .filter((f) => f.cpiScore && f.cpiScore > 0)
-    .map((f) => ({
-      x: f.totalRunningDistanceFeet,
-      y: f.rottenTomatoesScore,
-      cpi: f.cpiScore,
-      title: f.title,
-      year: f.year,
-    }));
-
-  const cpiScatterChartData = {
-    datasets: [
-      {
-        label: 'CPI Performance',
-        data: cpiScatterData,
-        backgroundColor: (context: ScriptableContext<'line'>) => {
-          const cpi = (context.raw as { cpi?: number })?.cpi ?? 0;
-          // Color based on CPI value - higher CPI = more amber
-          if (cpi > 20) return COLORS.primary;
-          if (cpi > 10) return COLORS.tertiary;
-          if (cpi > 5) return COLORS.secondary;
-          return COLORS.slate;
-        },
-        borderColor: COLORS.primaryBorder,
-        pointRadius: (context: ScriptableContext<'line'>) => {
-          const cpi = (context.raw as { cpi?: number })?.cpi ?? 0;
-          // Size based on CPI value
-          return Math.min(Math.max(cpi / 2, 4), 12);
-        },
-        pointHoverRadius: 12,
-      },
-    ],
-  };
-
-  const cpiScatterOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: 'Running Distance (feet)',
-          color: '#cbd5e1',
-          font: { size: 14 },
-        },
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      y: {
-        title: {
-          display: true,
-          text: 'Rotten Tomatoes Score (%)',
-          color: '#cbd5e1',
-          font: { size: 14 },
-        },
-        beginAtZero: true,
-        max: 100,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'scatter'>[]) {
-            const point = context[0].raw as { title: string; year: number; cpi: number };
-            return `${point.title} (${point.year})`;
-          },
-          label: function (context: TooltipItem<'scatter'>) {
-            const point = context.raw as { cpi: number };
-            return [
-              `CPI: ${point.cpi.toFixed(2)}`,
-              `Distance: ${context.parsed.x} feet`,
-              `RT Score: ${context.parsed.y}%`,
-            ];
-          },
-        },
-      },
-    },
-  };
-
-  // ========== CHART 9: Decade Breakdown ==========
-  const decadeData: Record<string, { distance: number[]; count: number }> = {
-    '1980s': { distance: [], count: 0 },
-    '1990s': { distance: [], count: 0 },
-    '2000s': { distance: [], count: 0 },
-    '2010s': { distance: [], count: 0 },
-    '2020s': { distance: [], count: 0 },
-  };
-
-  vizData.films.forEach((film) => {
-    const decade = Math.floor(film.year / 10) * 10;
-    const decadeLabel = `${decade}s`;
-    if (decadeData[decadeLabel]) {
-      decadeData[decadeLabel].distance.push(film.totalRunningDistanceFeet);
-      decadeData[decadeLabel].count++;
-    }
-  });
-
-  const decadeAverages = Object.keys(decadeData).map((decade) => {
-    const distances = decadeData[decade].distance;
-    const avg = distances.length > 0 ? distances.reduce((a, b) => a + b, 0) / distances.length : 0;
-    return avg;
-  });
-
-  const decadeTotals = Object.keys(decadeData).map((decade) => {
-    const distances = decadeData[decade].distance;
-    return distances.reduce((a, b) => a + b, 0);
-  });
-
-  const decadeChartData = {
-    labels: Object.keys(decadeData),
-    datasets: [
-      {
-        label: 'Average Distance per Film',
-        data: decadeAverages,
-        backgroundColor: COLORS.secondaryLight,
-        borderColor: COLORS.secondary.replace('0.8', '1'),
-        borderWidth: 1,
-      },
-      {
-        label: 'Total Distance',
-        data: decadeTotals,
-        backgroundColor: COLORS.primaryLight,
-        borderColor: COLORS.primaryBorder,
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const decadeOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      x: {
-        ticks: { color: '#94a3b8' },
-        grid: { display: false },
-      },
-    },
-    plugins: {
-      legend: {
-        display: true,
-        labels: { color: '#cbd5e1' },
-      },
-      tooltip: {
-        callbacks: {
-          afterLabel: function (context: TooltipItem<'bar'>) {
-            const decade = context.label;
-            return `Films: ${decadeData[decade].count}`;
-          },
-        },
-      },
-    },
-  };
+  // ========== CHART 6: Cumulative Career Distance (Visx) ==========
+  // Handled by CumulativeDistanceChart component
+  // We need to calculate running total for the text description
+  const runningTotal = filteredFilms.reduce((acc, film) => acc + film.totalRunningDistanceFeet, 0);
 
   // ========== CHART 10: Running Density Analysis (Visx) ==========
-  // Handled by SprintIntensityChart component
-  const densityFilms = [...vizData.films]
+  const densityFilms = [...filteredFilms]
     .filter((f) => f.runningDensity && f.runningDensity > 0)
     .sort((a, b) => (b.runningDensity ?? 0) - (a.runningDensity ?? 0))
     .slice(0, 15);
 
   // ========== CHART 11: Mission: Impossible Franchise Focus ==========
-  const missionFilms = [...vizData.films]
+  const missionFilms = [...filteredFilms]
     .filter((f) => f.title.toLowerCase().includes('mission: impossible'))
     .sort((a, b) => a.year - b.year);
 
-  const missionChartData = {
-    labels: missionFilms.map((f) => {
-      const shortTitle = f.title.replace('Mission: Impossible', 'M:I');
-      return `${shortTitle.substring(0, 25)} (${f.year})`;
-    }),
-    datasets: [
-      {
-        label: 'Running Distance (feet)',
-        data: missionFilms.map((f) => f.totalRunningDistanceFeet),
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primaryBorder,
-        borderWidth: 2,
-        tension: 0.3,
-        fill: false,
-        yAxisID: 'y',
-      },
-      {
-        label: 'RT Score (%)',
-        data: missionFilms.map((f) => f.rottenTomatoesScore),
-        backgroundColor: COLORS.success,
-        borderColor: COLORS.success.replace('0.8', '1'),
-        borderWidth: 2,
-        tension: 0.3,
-        fill: false,
-        yAxisID: 'y1',
-      },
-    ],
-  };
-
-  const missionOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onHover: (_event: ChartEvent, activeElements: ActiveElement[], chart: Chart) => {
-      chart.canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-    },
-    interaction: {
-      mode: 'index' as const,
-      intersect: false,
-    },
-    scales: {
-      y: {
-        type: 'linear' as const,
-        display: true,
-        position: 'left' as const,
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Running Distance (feet)',
-          color: '#cbd5e1',
-          font: { size: 12 },
-        },
-        ticks: { color: '#94a3b8' },
-        grid: { color: '#334155' },
-      },
-      y1: {
-        type: 'linear' as const,
-        display: true,
-        position: 'right' as const,
-        beginAtZero: true,
-        max: 100,
-        title: {
-          display: true,
-          text: 'Rotten Tomatoes Score (%)',
-          color: '#cbd5e1',
-          font: { size: 12 },
-        },
-        ticks: { color: '#94a3b8' },
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-      x: {
-        ticks: {
-          color: '#94a3b8',
-          maxRotation: 45,
-          minRotation: 30,
-        },
-        grid: { color: '#334155' },
-      },
-    },
-    plugins: {
-      legend: {
-        display: true,
-        labels: { color: '#cbd5e1' },
-      },
-      tooltip: {
-        callbacks: {
-          title: function (context: TooltipItem<'line'>[]) {
-            const film = missionFilms[context[0].dataIndex];
-            return film.title;
-          },
-          label: function (context: TooltipItem<'line'>) {
-            if (context.datasetIndex === 0) {
-              return `Distance: ${(context.parsed.y ?? 0).toLocaleString()} feet`;
-            } else {
-              return `RT Score: ${context.parsed.y ?? 0}%`;
-            }
-          },
-        },
-      },
-    },
-  };
-
   return (
     <section id="visualizations" className="space-y-16">
-      {/* Original Chart 1 */}
+      {/* Chart 1: Running Over Time */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           Running Through the Years
@@ -761,12 +122,12 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           As Tom Cruise gets older, he runs more. This chart visualizes the running distance in his
           films over time, showing a clear upward trend in recent decades.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[400px]">
-          <Bar data={runningOverTimeData} options={runningOverTimeOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <RunningOverTimeChart data={filteredFilms} />
         </div>
       </div>
 
-      {/* Original Chart 2 */}
+      {/* Chart 2: Run vs Ratings */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           Does More Running Equal Better Movies?
@@ -775,12 +136,12 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           Analysis by Rotten Tomatoes suggests a strong correlation. Films where Cruise runs over
           1,000 feet have significantly higher average Tomatometer scores.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[450px]">
-          <Bar data={ratingsChartData} options={ratingsChartOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <RunVsRatingsChart data={filteredFilms} />
         </div>
       </div>
 
-      {/* New Chart 3: Top Running Films */}
+      {/* Chart 3: Top 10 Running Films */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           Top 10 Running Performances
@@ -791,7 +152,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
         </p>
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
           <TopRunningFilmsChart
-            data={topData.topRunningFilms.map((f) => ({
+            data={filteredFilms.map((f) => ({
               ...f,
               rottenTomatoesScore: f.rottenTomatoesScore ?? undefined,
             }))}
@@ -799,7 +160,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
         </div>
       </div>
 
-      {/* New Chart 4: Top CPI Films */}
+      {/* Chart 4: Top CPI Films */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           Cruise Performance Index (CPI) Leaderboard
@@ -810,7 +171,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
         </p>
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
           <CPILeaderboardChart
-            data={cpiData.topCpiFilms.map((f) => ({
+            data={filteredFilms.map((f) => ({
               ...f,
               cpiScore: f.cpiScore ?? undefined,
               rottenTomatoesScore: f.rottenTomatoesScore ?? undefined,
@@ -819,7 +180,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
         </div>
       </div>
 
-      {/* New Chart 5: Category Distribution */}
+      {/* Chart 5: Category Distribution */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           Filmography Breakdown by Running Category
@@ -832,7 +193,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
         </div>
       </div>
 
-      {/* New Chart 6: Cumulative Distance */}
+      {/* Chart 6: Cumulative Distance */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           Tom's Running Career Journey
@@ -841,16 +202,12 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           Cumulative running distance over his entire career. From zero to over{' '}
           {(runningTotal / 5280).toFixed(1)} miles.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[450px]">
-          <Line
-            data={cumulativeChartData}
-            options={cumulativeOptions}
-            plugins={[crosshairPlugin]}
-          />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <CumulativeDistanceChart data={filteredFilms} />
         </div>
       </div>
 
-      {/* New Chart 7: Quality vs Distance Scatter */}
+      {/* Chart 7: Quality vs Distance Scatter */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           The Sweet Spot: Quality vs Running Distance
@@ -859,36 +216,36 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           Each dot represents a film. Notice the cluster of high-quality, high-distance films in the
           top-right.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[500px]">
-          <Scatter data={qualityScatterData} options={qualityScatterOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <QualityVsDistanceChart data={filteredFilms} />
         </div>
       </div>
 
-      {/* New Chart 8: CPI Scatter */}
+      {/* Chart 8: CPI Scatter */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">CPI Performance Map</h2>
         <p className="text-center text-slate-400 mb-6">
           Bubble size and color indicate CPI score. Larger, brighter bubbles = peak Tom Cruise
           performances.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[500px]">
-          <Scatter data={cpiScatterChartData} options={cpiScatterOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <CPIPerformanceMap data={filteredFilms} />
         </div>
       </div>
 
-      {/* New Chart 9: Decade Breakdown */}
+      {/* Chart 9: Decade Breakdown */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">Evolution Across Decades</h2>
         <p className="text-center text-slate-400 mb-6">
           Tom's running has evolved dramatically from the 1980s to 2020s. The Mission: Impossible
           era changed everything.
         </p>
-        <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[450px]">
-          <Bar data={decadeChartData} options={decadeOptions} />
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+          <DecadeBreakdownChart data={filteredFilms} />
         </div>
       </div>
 
-      {/* New Chart 10: Running Density */}
+      {/* Chart 10: Running Density */}
       <div>
         <h2 className="text-3xl font-bold text-center mb-2 text-white">
           Most Sprint-Intensive Films
@@ -907,7 +264,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
         </div>
       </div>
 
-      {/* New Chart 11: Mission Impossible Franchise */}
+      {/* Chart 11: Mission Impossible Franchise */}
       {missionFilms.length > 0 && (
         <div>
           <h2 className="text-3xl font-bold text-center mb-2 text-white">
@@ -917,8 +274,8 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
             The franchise that defined modern Tom Cruise. Watch how both running distance and
             quality have progressed across {missionFilms.length} films.
           </p>
-          <div className="bg-slate-800 p-4 rounded-lg shadow-lg h-[450px]">
-            <Line data={missionChartData} options={missionOptions} />
+          <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
+            <MissionImpossibleChart data={filteredFilms} />
           </div>
         </div>
       )}

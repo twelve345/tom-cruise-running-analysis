@@ -1,10 +1,10 @@
 import React from 'react';
-import { AxisBottom, AxisLeft } from '@visx/axis';
-import type { ScaleLinear, ScaleBand } from 'd3-scale';
+import { AxisBottom, AxisLeft, AxisRight } from '@visx/axis';
+import type { ScaleLinear, ScaleBand, ScalePoint } from 'd3-scale';
 import { axisStyles } from './chartTheme';
 
 interface AxisProps {
-  scale: ScaleLinear<number, number> | ScaleBand<string>;
+  scale: ScaleLinear<number, number> | ScaleBand<string> | ScalePoint<string>;
   label?: string;
   top?: number;
   left?: number;
@@ -61,6 +61,37 @@ export const DarkAxisLeft: React.FC<AxisProps> = ({
     strokeWidth={axisStyles.left.axisLine.strokeWidth}
     tickStroke={axisStyles.left.tickLine.stroke}
     tickLabelProps={() => axisStyles.left.tickLabel}
+    labelProps={axisStyles.left.label}
+    hideAxisLine={hideAxisLine}
+    hideTicks={hideTicks}
+    numTicks={numTicks}
+    tickFormat={tickFormat}
+  />
+);
+
+export const DarkAxisRight: React.FC<AxisProps> = ({
+  scale,
+  label,
+  top,
+  left,
+  hideAxisLine = true,
+  hideTicks = true,
+  numTicks,
+  tickFormat,
+}) => (
+  <AxisRight
+    top={top}
+    left={left}
+    scale={scale}
+    label={label}
+    stroke={axisStyles.left.axisLine.stroke}
+    strokeWidth={axisStyles.left.axisLine.strokeWidth}
+    tickStroke={axisStyles.left.tickLine.stroke}
+    tickLabelProps={() => ({
+      ...axisStyles.left.tickLabel,
+      textAnchor: 'start',
+      dx: 4,
+    })}
     labelProps={axisStyles.left.label}
     hideAxisLine={hideAxisLine}
     hideTicks={hideTicks}

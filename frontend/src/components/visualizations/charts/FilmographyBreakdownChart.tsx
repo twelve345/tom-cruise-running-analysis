@@ -1,12 +1,15 @@
-import React from 'react';
-import { Pie } from '@visx/shape';
+import React, { useRef } from 'react';
+import { Pie, arc } from '@visx/shape';
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
+import { LegendOrdinal } from '@visx/legend';
+import { scaleOrdinal } from '@visx/scale';
+import { localPoint } from '@visx/event';
 
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { ChartTooltip } from '../shared/ChartTooltip';
 import { useTooltip } from '@visx/tooltip';
-import { colors } from '../shared/chartTheme';
+import { colors, getCategoryColor } from '../shared/chartTheme';
 
 interface FilmographyBreakdownChartProps {
   data: { label: string; count: number }[];
@@ -15,26 +18,21 @@ interface FilmographyBreakdownChartProps {
 export const FilmographyBreakdownChart: React.FC<FilmographyBreakdownChartProps> = ({ data }) => {
   const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
     useTooltip<{ label: string; count: number; percentage: number }>();
+  const svgRef = useRef<SVGSVGElement>(null);
 
   if (!data || data.length === 0) return null;
 
   const total = data.reduce((acc, curr) => acc + curr.count, 0);
 
-  // Override with specific colors to match original design but better
-  const getSegmentColor = (label: string) => {
-    switch (label) {
-      case 'No Run':
-        return colors.slate[600];
-      case 'Short Sprint':
-        return '#3b82f6'; // Blue-500
-      case 'Middle-Distance':
-        return '#eab308'; // Yellow-500
-      case 'Full Tom':
-        return '#f97316'; // Orange-500
-      default:
-        return colors.slate[500];
-    }
-  };
+  const ordinalColorScale = scaleOrdinal({
+    domain: ['No Run', 'Short Sprint', 'Middle-Distance', 'Full Tom'],
+    range: [
+      getCategoryColor('No Run'),
+      getCategoryColor('Short Sprint'),
+      getCategoryColor('Middle-Distance'),
+      getCategoryColor('Full Tom'),
+    ],
+  });
 
   return (
     <ChartWrapper height={400}>
@@ -46,7 +44,7 @@ export const FilmographyBreakdownChart: React.FC<FilmographyBreakdownChartProps>
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={svgRef} width={width} height={height}>
               <Group top={centerY} left={centerX}>
                 <Pie
                   data={data}
@@ -57,38 +55,43 @@ export const FilmographyBreakdownChart: React.FC<FilmographyBreakdownChartProps>
                   cornerRadius={4}
                 >
                   {(pie) => {
-                    return pie.arcs.map((arc, index) => {
-                      const { label, count } = arc.data;
-                      const arcPath = pie.path(arc);
+                    return pie.arcs.map((pieArc, index) => {
+                      const { label, count } = pieArc.data;
                       const isHovered = tooltipOpen && tooltipData?.label === label;
+
+                      const arcGenerator = arc()
+                        .innerRadius(innerRadius)
+                        .outerRadius(radius - 20)
+                        .padAngle(0.02)
+                        .cornerRadius(4);
+
+                      const arcGeneratorHover = arc()
+                        .innerRadius(innerRadius)
+                        .outerRadius(radius - 10) // Pop out 10px
+                        .padAngle(0.02)
+                        .cornerRadius(4);
+
+                      const arcPath = isHovered ? arcGeneratorHover(pieArc) : arcGenerator(pieArc);
 
                       return (
                         <g key={`arc-${label}-${index}`}>
                           <path
                             d={arcPath || ''}
-                            fill={getSegmentColor(label)}
+                            fill={getCategoryColor(label)}
                             fillOpacity={isHovered ? 1 : 0.8}
                             stroke={colors.slate[900]}
                             strokeWidth={2}
                             onMouseLeave={() => hideTooltip()}
                             onMouseMove={(event) => {
                               const percentage = (count / total) * 100;
+                              const point = localPoint(svgRef.current, event) || { x: 0, y: 0 };
                               showTooltip({
                                 tooltipData: { label, count, percentage },
-                                tooltipLeft: event.clientX, // Use clientX/Y for portal tooltip or relative for SVG
-                                tooltipTop: event.clientY,
+                                tooltipLeft: point.x,
+                                tooltipTop: point.y,
                               });
                             }}
-                            // Use localPoint if needed, but for now simple event coordinates
-                            // Actually ChartTooltip uses absolute positioning usually
-                            onMouseEnter={(_event) => {
-                              // Logic handled in mousemove
-                            }}
                             className="transition-all duration-300 cursor-pointer"
-                            style={{
-                              transform: isHovered ? 'scale(1.02)' : 'scale(1)',
-                              transformOrigin: 'center',
-                            }}
                           />
                           {/* Labels inside arcs if space permits? Maybe too crowded. */}
                         </g>
@@ -112,6 +115,23 @@ export const FilmographyBreakdownChart: React.FC<FilmographyBreakdownChartProps>
                 </Text>
               </Group>
             </svg>
+
+            <div className="flex justify-center mt-4">
+              <LegendOrdinal scale={ordinalColorScale} direction="row" labelMargin="0 15px 0 0">
+                {(labels) => (
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {labels.map((label, i) => (
+                      <div key={`legend-${i}`} className="flex items-center">
+                        <svg width={10} height={10} className="mr-2">
+                          <rect width={10} height={10} fill={label.value} rx={2} />
+                        </svg>
+                        <span className="text-sm text-slate-300">{label.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </LegendOrdinal>
+            </div>
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>

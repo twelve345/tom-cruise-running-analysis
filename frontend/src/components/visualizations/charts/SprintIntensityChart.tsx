@@ -6,7 +6,8 @@ import { ChartTooltip } from '../shared/ChartTooltip';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { AnimatedBar } from '../shared/AnimatedBar';
 import { useTooltip } from '@visx/tooltip';
-import { colors } from '../shared/chartTheme';
+import { getCategoryColor } from '../shared/chartTheme';
+import { getCategory } from '../../../utils/distanceCategories';
 
 interface FilmData {
   title: string;
@@ -90,8 +91,9 @@ export const SprintIntensityChart: React.FC<SprintIntensityChartProps> = ({ data
                       y={barY ?? 0}
                       width={barWidth}
                       height={barHeight}
-                      fill={colors.amber[300]} // Tertiary color
+                      fill={getCategoryColor(getCategory(d.totalRunningDistanceFeet))}
                       delay={i * 50}
+                      isHorizontal={true}
                       onMouseLeave={() => hideTooltip()}
                       onMouseEnter={(event) => {
                         showTooltip({

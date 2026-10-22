@@ -1,5 +1,4 @@
-import React from 'react';
-import { animated, useSpring } from '@react-spring/web';
+import React, { useEffect, useState } from 'react';
 
 interface AnimatedBarProps {
   x: number;
@@ -8,6 +7,7 @@ interface AnimatedBarProps {
   height: number;
   fill: string;
   delay?: number;
+  isHorizontal?: boolean;
   onMouseEnter?: (event: React.MouseEvent<SVGRectElement>) => void;
   onMouseLeave?: (event: React.MouseEvent<SVGRectElement>) => void;
 }
@@ -19,24 +19,41 @@ export const AnimatedBar: React.FC<AnimatedBarProps> = ({
   height,
   fill,
   delay = 0,
+  isHorizontal = false,
   onMouseEnter,
   onMouseLeave,
 }) => {
-  const spring = useSpring({
-    from: { height: 0, y: y + height },
-    to: { height, y },
-    delay,
-    config: { tension: 120, friction: 14 },
-  });
+  // Initial state depends on orientation
+  const getInitialState = () => {
+    if (isHorizontal) {
+      // Grow right: width 0, x constant
+      return { width: 0, height, y, x };
+    } else {
+      // Grow up: height 0, y at bottom
+      return { width, height: 0, y: y + height, x };
+    }
+  };
+
+  const [style, setStyle] = useState(getInitialState());
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStyle({ width, height, y, x });
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [width, height, y, x, delay, isHorizontal]);
 
   return (
-    <animated.rect
-      x={x}
-      width={width}
+    <rect
+      x={style.x}
+      y={style.y}
+      width={style.width}
+      height={style.height}
       fill={fill}
-      style={spring}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      className="transition-all duration-700 ease-out"
     />
   );
 };

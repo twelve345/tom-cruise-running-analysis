@@ -6,7 +6,7 @@ export interface FilterState {
 
 export const INITIAL_FILTERS: FilterState = {
   category: 'All',
-  yearRange: [1981, 2024],
+  yearRange: [1981, 2025],
   rtScore: [0, 100],
 };
 
