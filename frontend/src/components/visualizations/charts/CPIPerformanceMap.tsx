@@ -67,23 +67,10 @@ export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) =>
 
         // Helper for color/size based on CPI
         const getPointStyle = (cpi: number) => {
-          let fill = colors.slate[500];
-          let size = 60;
-
-          if (cpi > 20) {
-            fill = colors.violet[500];
-            size = 300;
-          } else if (cpi > 10) {
-            fill = colors.violet[400];
-            size = 150;
-          } else if (cpi > 5) {
-            fill = colors.violet[300];
-            size = 80;
-          } else {
-            fill = colors.slate[500];
-            size = 40;
-          }
-          return { fill, size };
+          if (cpi > 20) return { fill: colors.violet[500], size: 300 };
+          if (cpi > 10) return { fill: colors.violet[400], size: 150 };
+          if (cpi > 5) return { fill: colors.violet[300], size: 80 };
+          return { fill: colors.slate[500], size: 40 };
         };
 
         return (

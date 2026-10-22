@@ -39,15 +39,13 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
   // Calculate cumulative distance
   const cumulativeData = useMemo(() => {
     const sorted = [...data].sort((a, b) => a.year - b.year);
+    const points: { year: number; distance: number; title: string }[] = [];
     let total = 0;
-    return sorted.map((f) => {
+    for (const f of sorted) {
       total += f.totalRunningDistanceFeet;
-      return {
-        year: f.year,
-        distance: total,
-        title: f.title,
-      };
-    });
+      points.push({ year: f.year, distance: total, title: f.title });
+    }
+    return points;
   }, [data]);
 
   // Accessors
