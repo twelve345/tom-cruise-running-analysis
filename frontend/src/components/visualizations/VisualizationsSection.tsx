@@ -96,13 +96,8 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
   // We need to calculate running total for the text description
   const runningTotal = filteredFilms.reduce((acc, film) => acc + film.totalRunningDistanceFeet, 0);
 
-  // ========== CHART 10: Running Density Analysis (Visx) ==========
-  const densityFilms = [...filteredFilms]
-    .filter((f) => f.runningDensity && f.runningDensity > 0)
-    .sort((a, b) => (b.runningDensity ?? 0) - (a.runningDensity ?? 0))
-    .slice(0, 15);
-
   // ========== CHART 11: Mission: Impossible Franchise Focus ==========
+  // The one place the franchise is selected; the chart plots what it is given.
   const missionFilms = [...allFilms]
     .filter((f) => f.title.toLowerCase().includes('mission: impossible'))
     .sort((a, b) => a.year - b.year);
@@ -147,12 +142,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           leaderboard.
         </p>
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
-          <TopRunningFilmsChart
-            data={filteredFilms.map((f) => ({
-              ...f,
-              rottenTomatoesScore: f.rottenTomatoesScore ?? undefined,
-            }))}
-          />
+          <TopRunningFilmsChart data={filteredFilms} />
         </div>
       </div>
 
@@ -166,13 +156,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           Score ÷ 100). These are Tom's most complete performances.
         </p>
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
-          <CPILeaderboardChart
-            data={filteredFilms.map((f) => ({
-              ...f,
-              cpiScore: f.cpiScore ?? undefined,
-              rottenTomatoesScore: f.rottenTomatoesScore ?? undefined,
-            }))}
-          />
+          <CPILeaderboardChart data={filteredFilms} />
         </div>
       </div>
 
@@ -251,12 +235,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           runtime.
         </p>
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
-          <SprintIntensityChart
-            data={densityFilms.map((f) => ({
-              ...f,
-              runningDensity: f.runningDensity ?? undefined,
-            }))}
-          />
+          <SprintIntensityChart data={filteredFilms} />
         </div>
       </div>
 

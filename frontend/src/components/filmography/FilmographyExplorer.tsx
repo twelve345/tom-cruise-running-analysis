@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { graphql } from '../../gql';
 import type { FilmSortField, SortOrder } from '../../gql/graphql';
-import { getCategory, getCategoryLabel, FILTER_CATEGORY_MAP } from '../../utils/distanceCategories';
+import { getCategory, getCategoryLabel } from '../../utils/distanceCategories';
+import { matchesFilters } from '../../utils/filmFilters';
 import { getCategoryColor } from '../visualizations/shared/chartTheme';
 import type { FilterState } from '../../types/filters';
 
@@ -128,32 +129,7 @@ export const FilmographyExplorer: React.FC<FilmographyExplorerProps> = ({ filter
     setExpandedRows(newExpanded);
   };
 
-  const filteredFilms =
-    data?.films.filter((film) => {
-      // Category Filter
-      if (filters.category !== 'All') {
-        const category = getCategory(film.totalRunningDistanceFeet);
-        const targetCategory = FILTER_CATEGORY_MAP[filters.category];
-        if (category !== targetCategory) return false;
-      }
-
-      // Year Range Filter
-      if (film.year < filters.yearRange[0] || film.year > filters.yearRange[1]) {
-        return false;
-      }
-
-      // RT Score Filter
-      if (film.rottenTomatoesScore !== null && film.rottenTomatoesScore !== undefined) {
-        if (
-          film.rottenTomatoesScore < filters.rtScore[0] ||
-          film.rottenTomatoesScore > filters.rtScore[1]
-        ) {
-          return false;
-        }
-      }
-
-      return true;
-    }) || [];
+  const filteredFilms = data?.films.filter((film) => matchesFilters(film, filters)) ?? [];
 
   const getCategoryBadge = (distance: number) => {
     const category = getCategory(distance);

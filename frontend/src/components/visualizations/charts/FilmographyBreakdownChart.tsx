@@ -17,7 +17,7 @@ interface FilmographyBreakdownChartProps {
 export const FilmographyBreakdownChart: React.FC<FilmographyBreakdownChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -125,7 +125,7 @@ export const FilmographyBreakdownChart: React.FC<FilmographyBreakdownChartProps>
 
               {tooltipOpen && tooltipData && (
                 <ChartTooltip
-                  containerBounds={containerBounds}
+                  containerOffset={containerOffset}
                   left={tooltipLeft ?? 0}
                   top={tooltipTop ?? 0}
                 >

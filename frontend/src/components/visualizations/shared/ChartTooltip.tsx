@@ -1,28 +1,33 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { TooltipWithBounds, defaultStyles } from '@visx/tooltip';
-import type { UseTooltipInPortal } from '@visx/tooltip';
+import type { ContainerOffset } from './useChartTooltip';
 import { colors } from './chartTheme';
 
 interface ChartTooltipProps {
-  /** The `containerBounds` from this chart's useChartTooltip(). */
-  containerBounds: Pick<UseTooltipInPortal['containerBounds'], 'left' | 'top'>;
+  /** The `containerOffset` from this chart's useChartTooltip(). */
+  containerOffset: ContainerOffset;
   /** Position in the chart svg's own coordinates. */
   left: number;
   top: number;
   children: React.ReactNode;
 }
 
+/**
+ * Rendered with React's createPortal into document.body. (visx's TooltipInPortal manages
+ * its own portal node in a class component, which React StrictMode's simulated remount
+ * leaves detached, so its tooltips never appear in development.)
+ */
 export const ChartTooltip: React.FC<ChartTooltipProps> = ({
-  containerBounds,
+  containerOffset,
   left,
   top,
   children,
 }) => {
   return createPortal(
     <TooltipWithBounds
-      top={top + containerBounds.top + window.scrollY}
-      left={left + containerBounds.left + window.scrollX}
+      top={top + containerOffset.top}
+      left={left + containerOffset.left}
       style={{
         ...defaultStyles,
         backgroundColor: colors.slate[800],

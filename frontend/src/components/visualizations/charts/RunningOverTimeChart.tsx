@@ -24,7 +24,7 @@ interface RunningOverTimeChartProps {
 export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -53,7 +53,7 @@ export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data
   return (
     <ChartWrapper height={400}>
       {({ width, height }) => {
-        const margin = { top: 20, right: 30, bottom: 100, left: 60 };
+        const margin = { top: 20, right: 30, bottom: 40, left: 60 };
         const { xMax, yMax } = innerSize(width, height, margin);
 
         const xScale = scaleBand<string>({
@@ -75,19 +75,12 @@ export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data
                 <DarkAxisBottom
                   top={yMax}
                   scale={xScale}
+                  // "1983 - Risky Bu..." is ~110px at 11px; space ticks so labels never touch.
+                  minTickSpacing={120}
                   tickFormat={(v) => {
-                    // Truncate long labels
                     const label = labelById.get(v) ?? v;
                     return label.length > 15 ? `${label.substring(0, 15)}...` : label;
                   }}
-                  // Rotate labels for better fit
-                  // Note: DarkAxisBottom doesn't expose tickLabelProps directly for rotation easily
-                  // without modifying the component or passing a custom prop.
-                  // But DarkAxisBottom uses axisStyles.bottom.tickLabel.
-                  // We might need to adjust DarkThemeAxis to allow overriding tickLabelProps or just accept it.
-                  // For now, let's see how it looks. If crowded, we might need to skip ticks or rotate.
-                  // Actually, the original chart rotated ticks 90 degrees.
-                  // Let's assume we might need to update DarkThemeAxis later if rotation is needed.
                 />
                 <DarkAxisLeft scale={yScale} label="Distance (feet)" tickFormat={(v) => `${v}`} />
 
@@ -117,7 +110,7 @@ export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >

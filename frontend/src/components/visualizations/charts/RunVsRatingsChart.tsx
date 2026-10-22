@@ -24,7 +24,7 @@ interface RunVsRatingsChartProps {
 export const RunVsRatingsChart: React.FC<RunVsRatingsChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -125,7 +125,7 @@ export const RunVsRatingsChart: React.FC<RunVsRatingsChartProps> = ({ data }) =>
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >

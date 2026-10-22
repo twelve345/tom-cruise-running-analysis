@@ -25,7 +25,7 @@ interface CPIPerformanceMapProps {
 export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -164,7 +164,7 @@ export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) =>
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >
@@ -181,7 +181,10 @@ export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) =>
                   Distance: {tooltipData.totalRunningDistanceFeet.toLocaleString()} ft
                 </div>
                 <div className="text-slate-400 text-xs">
-                  Score: {tooltipData.rottenTomatoesScore}%
+                  Score:{' '}
+                  {tooltipData.rottenTomatoesScore != null
+                    ? `${tooltipData.rottenTomatoesScore}%`
+                    : 'n/a'}
                 </div>
               </ChartTooltip>
             )}

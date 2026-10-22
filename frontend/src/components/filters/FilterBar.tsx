@@ -1,5 +1,6 @@
 import React from 'react';
 import { type FilterState, CATEGORIES, FILM_YEAR_MIN, FILM_YEAR_MAX } from '../../types/filters';
+import { withRangeBound } from '../../utils/filmFilters';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -22,6 +23,45 @@ const RT_PRESETS: { label: string; value: [number, number] }[] = [
   { label: 'Fresh (60-100%)', value: [60, 100] },
   { label: 'Rotten (0-59%)', value: [0, 59] },
 ];
+
+/**
+ * A hand-typed range bound. It applies on blur or Enter, never per keystroke, so a
+ * half-typed value ("2" on the way to "2010") can't empty every chart. `onCommit` returns
+ * the value actually applied (after clamping), which the field then shows.
+ */
+const RangeBoundInput = ({
+  value,
+  min,
+  max,
+  className,
+  onCommit,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  className: string;
+  onCommit: (n: number) => number;
+}) => {
+  const commit = (input: HTMLInputElement) => {
+    const n = Number.parseInt(input.value, 10);
+    input.value = String(Number.isNaN(n) ? value : onCommit(n));
+  };
+  return (
+    <input
+      // Remount with the new default when the applied value changes elsewhere (a preset).
+      key={value}
+      type="number"
+      defaultValue={value}
+      onBlur={(e) => commit(e.currentTarget)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit(e.currentTarget);
+      }}
+      className={className}
+      min={min}
+      max={max}
+    />
+  );
+};
 
 export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
@@ -54,11 +94,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     }
   };
 
-  const handleYearInputChange = (index: 0 | 1, value: string) => {
+  const handleYearInputChange = (index: 0 | 1, n: number) => {
     setIsCustomYear(true);
-    const newRange = [...filters.yearRange] as [number, number];
-    newRange[index] = parseInt(value, 10) || 0;
-    onFilterChange({ ...filters, yearRange: newRange });
+    const yearRange = withRangeBound(filters.yearRange, index, n, FILM_YEAR_MIN, FILM_YEAR_MAX);
+    onFilterChange({ ...filters, yearRange });
+    return yearRange[index];
   };
 
   // RT Logic
@@ -80,11 +120,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     }
   };
 
-  const handleRTInputChange = (index: 0 | 1, value: string) => {
+  const handleRTInputChange = (index: 0 | 1, n: number) => {
     setIsCustomRT(true);
-    const newRange = [...filters.rtScore] as [number, number];
-    newRange[index] = parseInt(value, 10) || 0;
-    onFilterChange({ ...filters, rtScore: newRange });
+    const rtScore = withRangeBound(filters.rtScore, index, n, 0, 100);
+    onFilterChange({ ...filters, rtScore });
+    return rtScore[index];
   };
 
   return (
@@ -132,19 +172,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
               {currentYearPreset === 'Custom' && (
                 <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                  <input
-                    type="number"
+                  <RangeBoundInput
                     value={filters.yearRange[0]}
-                    onChange={(e) => handleYearInputChange(0, e.target.value)}
+                    onCommit={(n) => handleYearInputChange(0, n)}
                     className="w-20 bg-slate-800 text-slate-200 border border-slate-700 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                     min={FILM_YEAR_MIN}
                     max={FILM_YEAR_MAX}
                   />
                   <span className="text-slate-500">-</span>
-                  <input
-                    type="number"
+                  <RangeBoundInput
                     value={filters.yearRange[1]}
-                    onChange={(e) => handleYearInputChange(1, e.target.value)}
+                    onCommit={(n) => handleYearInputChange(1, n)}
                     className="w-20 bg-slate-800 text-slate-200 border border-slate-700 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                     min={FILM_YEAR_MIN}
                     max={FILM_YEAR_MAX}
@@ -175,19 +213,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
               {currentRTPreset === 'Custom' && (
                 <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                  <input
-                    type="number"
+                  <RangeBoundInput
                     value={filters.rtScore[0]}
-                    onChange={(e) => handleRTInputChange(0, e.target.value)}
+                    onCommit={(n) => handleRTInputChange(0, n)}
                     className="w-16 bg-slate-800 text-slate-200 border border-slate-700 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                     min={0}
                     max={100}
                   />
                   <span className="text-slate-500">-</span>
-                  <input
-                    type="number"
+                  <RangeBoundInput
                     value={filters.rtScore[1]}
-                    onChange={(e) => handleRTInputChange(1, e.target.value)}
+                    onCommit={(n) => handleRTInputChange(1, n)}
                     className="w-16 bg-slate-800 text-slate-200 border border-slate-700 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
                     min={0}
                     max={100}

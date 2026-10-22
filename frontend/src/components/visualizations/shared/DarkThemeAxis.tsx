@@ -11,22 +11,30 @@ interface AxisProps {
   hideAxisLine?: boolean;
   hideTicks?: boolean;
   numTicks?: number;
+  /** Bottom axis only: horizontal room each tick label needs (default 80px). */
+  minTickSpacing?: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tickFormat?: (value: any) => string;
 }
 
-// Bottom-axis labels need roughly this much horizontal room each.
+// Bottom-axis labels need roughly this much horizontal room each, unless a chart says more.
 const MIN_TICK_SPACING = 80;
 
 /**
- * Cap the tick count by the axis's pixel width so labels don't overlap on narrow
- * screens. visx thins band/point axes by numTicks too, so this covers both scale kinds.
- * 10 is visx's default.
+ * Ticks that fit the axis's pixel width, so labels don't overlap on narrow screens.
+ * Linear scales get a capped tick count (10 is visx's default). Band and point scales get
+ * explicit tick values: visx's own thinning steps by Math.round((n - 1) / numTicks), which
+ * shows every label whenever that rounds to 1.
  */
-const fitTicks = (scale: AxisProps['scale'], numTicks = 10) => {
+const fitTicks = (scale: AxisProps['scale'], numTicks = 10, spacing = MIN_TICK_SPACING) => {
   const [start, end] = scale.range();
-  const budget = Math.floor(Math.abs(end - start) / MIN_TICK_SPACING);
-  return Math.max(2, Math.min(numTicks, budget));
+  const budget = Math.max(2, Math.min(numTicks, Math.floor(Math.abs(end - start) / spacing)));
+  if ('bandwidth' in scale) {
+    const domain = scale.domain();
+    const step = Math.ceil(domain.length / budget);
+    return { tickValues: domain.filter((_, i) => i % step === 0) };
+  }
+  return { numTicks: budget };
 };
 
 export const DarkAxisBottom: React.FC<AxisProps> = ({
@@ -37,6 +45,7 @@ export const DarkAxisBottom: React.FC<AxisProps> = ({
   hideAxisLine = false,
   hideTicks = false,
   numTicks,
+  minTickSpacing,
   tickFormat,
 }) => (
   <AxisBottom
@@ -51,7 +60,7 @@ export const DarkAxisBottom: React.FC<AxisProps> = ({
     labelProps={axisStyles.bottom.label}
     hideAxisLine={hideAxisLine}
     hideTicks={hideTicks}
-    numTicks={fitTicks(scale, numTicks)}
+    {...fitTicks(scale, numTicks, minTickSpacing)}
     tickFormat={tickFormat}
   />
 );

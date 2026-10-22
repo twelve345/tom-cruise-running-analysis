@@ -25,7 +25,7 @@ interface MissionImpossibleChartProps {
 export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -34,14 +34,12 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
     showTooltipAt,
   } = useChartTooltip<FilmData>();
 
-  // Filter for MI films and sort by year
-  const miData = useMemo(() => {
-    return [...data]
-      .filter((f) => f.title.toLowerCase().includes('mission: impossible'))
-      .sort((a, b) => a.year - b.year);
-  }, [data]);
+  // VisualizationsSection selects the franchise films and sorts them by year.
+  const miData = data;
+  // Films without an RT score are left off the score line rather than drawn at 0%.
+  const scoredData = useMemo(() => miData.filter((d) => d.rottenTomatoesScore != null), [miData]);
 
-  if (!miData || miData.length === 0) return null;
+  if (miData.length === 0) return null;
 
   // Accessors
   const getLabel = (d: FilmData) => {
@@ -54,7 +52,7 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
   return (
     <ChartWrapper height={450}>
       {({ width, height }) => {
-        const margin = { top: 20, right: 60, bottom: 100, left: 60 };
+        const margin = { top: 20, right: 60, bottom: 40, left: 60 };
         const { xMax, yMax } = innerSize(width, height, margin);
 
         // Scales
@@ -83,10 +81,9 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
                 <DarkAxisBottom
                   top={yMax}
                   scale={xScale}
-                  tickFormat={(v) => {
-                    // Truncate or wrap if needed
-                    return v.length > 20 ? `${v.substring(0, 20)}...` : v;
-                  }}
+                  // Labels run to ~23 characters (~140px at 11px).
+                  minTickSpacing={150}
+                  tickFormat={(v) => (v.length > 20 ? `${v.substring(0, 20)}...` : v)}
                 />
                 <DarkAxisLeft
                   scale={yDistanceScale}
@@ -125,15 +122,15 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
 
                 {/* Score Line */}
                 <LinePath
-                  data={miData}
+                  data={scoredData}
                   x={(d) => xScale(getLabel(d)) ?? 0}
                   y={(d) => yScoreScale(getScore(d))}
-                  stroke={colors.slate[400]} // Or Green/Success color? Original used success.
+                  stroke={colors.slate[400]}
                   strokeWidth={3}
                   curve={curveMonotoneX}
                   strokeDasharray="5,5"
                 />
-                {miData.map((d, i) => (
+                {scoredData.map((d, i) => (
                   <GlyphCircle
                     key={`score-point-${i}`}
                     left={xScale(getLabel(d)) ?? 0}
@@ -164,7 +161,7 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >
@@ -180,7 +177,9 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
                 <div className="text-slate-200">
                   RT Score:{' '}
                   <span className="font-mono font-bold text-slate-400">
-                    {tooltipData.rottenTomatoesScore}%
+                    {tooltipData.rottenTomatoesScore != null
+                      ? `${tooltipData.rottenTomatoesScore}%`
+                      : 'n/a'}
                   </span>
                 </div>
               </ChartTooltip>

@@ -14,7 +14,7 @@ interface FilmData {
   id: string;
   title: string;
   year: number;
-  runningDensity?: number;
+  runningDensity?: number | null;
   totalRunningDistanceFeet: number;
 }
 
@@ -25,7 +25,7 @@ interface SprintIntensityChartProps {
 export const SprintIntensityChart: React.FC<SprintIntensityChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -36,15 +36,18 @@ export const SprintIntensityChart: React.FC<SprintIntensityChartProps> = ({ data
 
   // Sort by Density descending and take top 15 (as per original)
   const sortedData = useMemo(() => {
-    return [...data]
-      .filter(
-        (d) => d.runningDensity !== undefined && d.runningDensity !== null && d.runningDensity > 0
-      )
+    return data
+      .filter((d) => (d.runningDensity ?? 0) > 0)
       .sort((a, b) => (b.runningDensity ?? 0) - (a.runningDensity ?? 0))
       .slice(0, 15);
   }, [data]);
 
-  if (!sortedData || sortedData.length === 0) return null;
+  if (sortedData.length === 0)
+    return (
+      <div className="text-center text-slate-400 py-10">
+        No running data available for current filters
+      </div>
+    );
 
   // Accessors
   const getId = (d: FilmData) => d.id;
@@ -114,7 +117,7 @@ export const SprintIntensityChart: React.FC<SprintIntensityChartProps> = ({ data
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >

@@ -15,7 +15,7 @@ interface FilmData {
   title: string;
   year: number;
   totalRunningDistanceFeet: number;
-  rottenTomatoesScore?: number;
+  rottenTomatoesScore?: number | null;
 }
 
 interface TopRunningFilmsChartProps {
@@ -25,7 +25,7 @@ interface TopRunningFilmsChartProps {
 export const TopRunningFilmsChart: React.FC<TopRunningFilmsChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -34,14 +34,20 @@ export const TopRunningFilmsChart: React.FC<TopRunningFilmsChartProps> = ({ data
     showTooltipAt,
   } = useChartTooltip<FilmData>();
 
-  // Sort by distance descending and take top 10
+  // Films with any running, by distance descending, top 10
   const sortedData = useMemo(() => {
-    return [...data]
+    return data
+      .filter((d) => d.totalRunningDistanceFeet > 0)
       .sort((a, b) => b.totalRunningDistanceFeet - a.totalRunningDistanceFeet)
       .slice(0, 10);
   }, [data]);
 
-  if (!sortedData || sortedData.length === 0) return null;
+  if (sortedData.length === 0)
+    return (
+      <div className="text-center text-slate-400 py-10">
+        No running data available for current filters
+      </div>
+    );
 
   // Accessors
   const getId = (d: FilmData) => d.id;
@@ -111,7 +117,7 @@ export const TopRunningFilmsChart: React.FC<TopRunningFilmsChartProps> = ({ data
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >
@@ -124,7 +130,7 @@ export const TopRunningFilmsChart: React.FC<TopRunningFilmsChartProps> = ({ data
                     {tooltipData.totalRunningDistanceFeet.toLocaleString()} ft
                   </span>
                 </div>
-                {tooltipData.rottenTomatoesScore && (
+                {tooltipData.rottenTomatoesScore != null && (
                   <div className="text-slate-300 text-xs">
                     RT Score: {tooltipData.rottenTomatoesScore}%
                   </div>

@@ -23,19 +23,20 @@ interface DecadeStats {
   decade: string;
   Average: number;
   Total: number;
+  filmCount: number;
 }
 
 export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
     tooltipData,
     hideTooltip,
     showTooltipAt,
-  } = useChartTooltip<{ key: string; value: number; decade: string }>();
+  } = useChartTooltip<{ key: string; value: number; decade: string; filmCount: number }>();
 
   // Aggregate data by decade
   const aggregatedData = useMemo(() => {
@@ -64,6 +65,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
         decade,
         Average: avg,
         Total: total,
+        filmCount: distances.length,
       };
     });
   }, [data]);
@@ -100,15 +102,11 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
           nice: true,
         });
 
+        // Average: blue, Total: amber (the legend below uses the same pair).
         const colorScale = scaleOrdinal<string, string>({
           domain: keys,
-          range: [colors.amber[500], colors.slate[500]], // Average: Amber, Total: Slate (or Blue)
-          // Original used Secondary (Blue) for Average and Primary (Amber) for Total.
-          // Let's match original intention but with our theme.
-          // Average: Blue (Secondary), Total: Amber (Primary)
+          range: [colors.blue[500], colors.amber[500]],
         });
-        // Update range to match original mapping logic better
-        colorScale.range(['#3b82f6', colors.amber[500]]);
 
         return (
           <>
@@ -145,6 +143,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
                                 key: bar.key,
                                 value: bar.value,
                                 decade: getDecade(aggregatedData[barGroup.index]),
+                                filmCount: aggregatedData[barGroup.index].filmCount,
                               })
                             }
                             className="hover:opacity-80 cursor-pointer"
@@ -157,7 +156,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
 
                 {/* Legend */}
                 <Group left={xMax - 150} top={-30}>
-                  <rect width={12} height={12} fill="#3b82f6" rx={2} />
+                  <rect width={12} height={12} fill={colors.blue[500]} rx={2} />
                   <text x={20} y={10} fill={colors.slate[300]} fontSize={12}>
                     Average Distance
                   </text>
@@ -172,7 +171,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >
@@ -180,8 +179,11 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
                 <div className="text-slate-300">
                   {tooltipData.key}:{' '}
                   <span className="font-mono font-bold text-amber-400">
-                    {tooltipData.value.toLocaleString()} ft
+                    {Math.round(tooltipData.value).toLocaleString()} ft
                   </span>
+                </div>
+                <div className="text-slate-400 text-xs mt-1">
+                  {tooltipData.filmCount} {tooltipData.filmCount === 1 ? 'film' : 'films'}
                 </div>
               </ChartTooltip>
             )}

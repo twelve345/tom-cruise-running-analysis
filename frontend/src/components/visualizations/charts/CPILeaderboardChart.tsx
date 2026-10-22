@@ -14,9 +14,9 @@ interface FilmData {
   id: string;
   title: string;
   year: number;
-  cpiScore?: number;
+  cpiScore?: number | null;
   totalRunningDistanceFeet: number;
-  rottenTomatoesScore?: number;
+  rottenTomatoesScore?: number | null;
 }
 
 interface CPILeaderboardChartProps {
@@ -26,7 +26,7 @@ interface CPILeaderboardChartProps {
 export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -37,13 +37,18 @@ export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }
 
   // Sort by CPI descending and take top 10
   const sortedData = useMemo(() => {
-    return [...data]
-      .filter((d) => d.cpiScore !== undefined && d.cpiScore !== null)
+    return data
+      .filter((d) => (d.cpiScore ?? 0) > 0)
       .sort((a, b) => (b.cpiScore ?? 0) - (a.cpiScore ?? 0))
       .slice(0, 10);
   }, [data]);
 
-  if (!sortedData || sortedData.length === 0) return null;
+  if (sortedData.length === 0)
+    return (
+      <div className="text-center text-slate-400 py-10">
+        No running data available for current filters
+      </div>
+    );
 
   // Accessors
   const getId = (d: FilmData) => d.id;
@@ -113,7 +118,7 @@ export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >

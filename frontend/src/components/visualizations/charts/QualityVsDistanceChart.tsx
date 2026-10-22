@@ -24,7 +24,7 @@ interface QualityVsDistanceChartProps {
 export const QualityVsDistanceChart: React.FC<QualityVsDistanceChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -129,7 +129,7 @@ export const QualityVsDistanceChart: React.FC<QualityVsDistanceChartProps> = ({ 
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >

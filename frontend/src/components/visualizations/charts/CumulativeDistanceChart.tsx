@@ -27,7 +27,7 @@ interface CumulativeDistanceChartProps {
 export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = ({ data }) => {
   const {
     containerRef,
-    containerBounds,
+    containerOffset,
     tooltipOpen,
     tooltipLeft,
     tooltipTop,
@@ -51,7 +51,8 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
   // Accessors
   const getYear = (d: { year: number }) => d.year;
   const getDistance = (d: { distance: number }) => d.distance;
-  const bisectYear = bisector<{ year: number }, number>((d) => d.year).left;
+  // Index of the first point after `year`.
+  const bisectAfterYear = bisector<{ year: number }, number>((d) => d.year).right;
 
   if (!cumulativeData || cumulativeData.length === 0) return null;
 
@@ -82,13 +83,18 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
         ) => {
           const { x } = localPoint(event) || { x: 0 };
           const x0 = xScale.invert(x - margin.left);
-          const index = bisectYear(cumulativeData, x0, 1);
-          const d0 = cumulativeData[index - 1];
-          const d1 = cumulativeData[index];
-          let d = d0;
-          if (d1 && getYear(d1)) {
-            d = x0 - getYear(d0) > getYear(d1) - x0 ? d1 : d0;
-          }
+          // A year with several films has several points at the same x, and the career
+          // total through that year is its LAST point. Snap to the nearest year, then take
+          // that year's last point.
+          const after = bisectAfterYear(cumulativeData, x0);
+          const prevYear = after > 0 ? getYear(cumulativeData[after - 1]) : undefined;
+          const nextYear =
+            after < cumulativeData.length ? getYear(cumulativeData[after]) : undefined;
+          const year =
+            prevYear === undefined || (nextYear !== undefined && nextYear - x0 < x0 - prevYear)
+              ? (nextYear as number)
+              : prevYear;
+          const d = cumulativeData[bisectAfterYear(cumulativeData, year) - 1];
           showTooltip({
             tooltipData: d,
             tooltipLeft: xScale(getYear(d)) + margin.left,
@@ -199,7 +205,7 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
 
             {tooltipOpen && tooltipData && (
               <ChartTooltip
-                containerBounds={containerBounds}
+                containerOffset={containerOffset}
                 left={tooltipLeft ?? 0}
                 top={tooltipTop ?? 0}
               >
