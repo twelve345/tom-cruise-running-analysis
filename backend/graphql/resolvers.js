@@ -1,201 +1,145 @@
 /**
- * GraphQL Resolvers - Hybrid PostgreSQL + MongoDB Implementation
+ * GraphQL Resolvers - MongoDB
  *
- * PostgreSQL: Core relational data (films, aggregates, users)
- * MongoDB: Flexible document data (running instances, metadata)
+ * Collections:
+ * - films: film documents keyed by an integer `id` (derived stats stored, see db/filmStats.js)
+ * - runninginstances: running scenes, linked to films by `filmId`
+ * - filmmetadata: trivia and running analysis, linked to films by `filmId`
  */
 
-const pool = require('../db/postgres');
 const { getMongoDB } = require('../db/mongodb');
 const { ObjectId } = require('mongodb');
+const { deriveFilmStats, round } = require('../db/filmStats');
+
+const SORT_FIELDS = {
+  year: 'year',
+  title: 'title',
+  runtimeMinutes: 'runtimeMinutes',
+  totalRunningDistanceFeet: 'totalRunningDistanceFeet',
+  cpiScore: 'cpiScore',
+  rottenTomatoesScore: 'rottenTomatoesScore',
+};
+
+const MANUAL_SOURCE = { provider: 'Manual entry' };
+
+// Manually created running instances get ranks from here up, clear of the source ranking
+// (1-300) that db/sync.js upserts by rank on every deploy.
+const MANUAL_RANK_START = 10000;
 
 const resolvers = {
   // ============================================================================
-  // POSTGRESQL QUERY RESOLVERS
+  // QUERY RESOLVERS
   // ============================================================================
 
   // Film Queries
   films: async ({ filter, sortBy = 'year', sortOrder = 'DESC', limit = 100, offset = 0 }) => {
-    let query = 'SELECT * FROM films WHERE 1=1';
-    const params = [];
-    let paramIndex = 1;
+    const db = getMongoDB();
+    const [docs, counts] = await Promise.all([
+      db.collection('films').find(filmFilterQuery(filter)).sort({ id: 1 }).toArray(),
+      instanceCountsByFilm(db),
+    ]);
 
-    // Apply filters
-    if (filter) {
-      if (filter.minYear) {
-        query += ` AND year >= $${paramIndex++}`;
-        params.push(filter.minYear);
-      }
-      if (filter.maxYear) {
-        query += ` AND year <= $${paramIndex++}`;
-        params.push(filter.maxYear);
-      }
-      if (filter.minDistance) {
-        query += ` AND total_running_distance_feet >= $${paramIndex++}`;
-        params.push(filter.minDistance);
-      }
-      if (filter.maxDistance) {
-        query += ` AND total_running_distance_feet <= $${paramIndex++}`;
-        params.push(filter.maxDistance);
-      }
-      if (filter.minCpi) {
-        query += ` AND cpi_score >= $${paramIndex++}`;
-        params.push(filter.minCpi);
-      }
-      if (filter.maxCpi) {
-        query += ` AND cpi_score <= $${paramIndex++}`;
-        params.push(filter.maxCpi);
-      }
-      if (filter.minRottenTomatoes) {
-        query += ` AND rotten_tomatoes_score >= $${paramIndex++}`;
-        params.push(filter.minRottenTomatoes);
-      }
-    }
-
-    // Apply sorting
-    const sortFieldMap = {
-      year: 'year',
-      title: 'title',
-      runtimeMinutes: 'runtime_minutes',
-      totalRunningDistanceFeet: 'total_running_distance_feet',
-      cpiScore: 'cpi_score',
-      rottenTomatoesScore: 'rotten_tomatoes_score',
-    };
-
-    // Special handling for runningInstancesCount (computed from MongoDB)
+    const direction = sortOrder === 'ASC' ? 1 : -1;
     if (sortBy === 'runningInstancesCount') {
-      // Fetch all films without pagination
-      const result = await pool.query(query, params);
-      const films = result.rows.map(mapFilmRow);
-
-      // Augment with MongoDB counts
-      const db = getMongoDB();
-      const filmsWithCounts = await Promise.all(
-        films.map(async (film) => {
-          const count = await db.collection('runninginstances').countDocuments({ filmId: film.id });
-          return { ...film, _instanceCount: count };
-        })
-      );
-
-      // Sort by instance count
-      filmsWithCounts.sort((a, b) => {
-        if (sortOrder === 'ASC') {
-          return a._instanceCount - b._instanceCount;
-        } else {
-          return b._instanceCount - a._instanceCount;
-        }
-      });
-
-      // Apply pagination
-      const paginatedFilms = filmsWithCounts.slice(offset, offset + limit);
-      return paginatedFilms;
+      docs.sort((a, b) => direction * ((counts.get(a.id) || 0) - (counts.get(b.id) || 0)));
+    } else {
+      const field = SORT_FIELDS[sortBy] || 'year';
+      docs.sort((a, b) => compareForSort(a[field], b[field], direction));
     }
 
-    query += ` ORDER BY ${sortFieldMap[sortBy] || 'year'} ${sortOrder}`;
-
-    // Apply pagination
-    query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-    params.push(limit, offset);
-
-    const result = await pool.query(query, params);
-    return result.rows.map(mapFilmRow);
+    return docs.slice(offset, offset + limit).map((doc) => mapFilm(doc, counts));
   },
 
   film: async ({ id }) => {
-    const result = await pool.query('SELECT * FROM films WHERE id = $1', [id]);
-    return result.rows[0] ? mapFilmRow(result.rows[0]) : null;
+    const doc = await findFilm(id);
+    return doc ? mapFilm(doc) : null;
   },
 
   filmByTitle: async ({ title }) => {
-    const result = await pool.query('SELECT * FROM films WHERE LOWER(title) = LOWER($1)', [title]);
-    return result.rows[0] ? mapFilmRow(result.rows[0]) : null;
+    const doc = await getMongoDB()
+      .collection('films')
+      .findOne({ title }, { collation: { locale: 'en', strength: 2 } });
+    return doc ? mapFilm(doc) : null;
   },
 
   // Statistics Queries
   filmStats: async () => {
-    const result = await pool.query(`
-      SELECT
-        COUNT(*)::int as total_films,
-        SUM(total_running_distance_feet)::int as total_distance_feet,
-        SUM(total_running_time_seconds) as total_running_time_seconds,
-        AVG(total_running_distance_feet) as average_distance_per_film
-      FROM films
-    `);
+    const [stats] = await getMongoDB()
+      .collection('films')
+      .aggregate([
+        {
+          $group: {
+            _id: null,
+            totalFilms: { $sum: 1 },
+            totalDistanceFeet: { $sum: '$totalRunningDistanceFeet' },
+            totalRunningTimeSeconds: { $sum: '$totalRunningTimeSeconds' },
+            averageDistancePerFilm: { $avg: '$totalRunningDistanceFeet' },
+          },
+        },
+      ])
+      .toArray();
 
-    const stats = result.rows[0];
+    const totalDistanceFeet = stats?.totalDistanceFeet || 0;
     return {
-      totalFilms: stats.total_films,
-      totalDistanceFeet: stats.total_distance_feet || 0,
-      totalRunningTimeSeconds: parseFloat(stats.total_running_time_seconds) || 0,
-      averageDistancePerFilm: parseFloat(stats.average_distance_per_film) || 0,
-      careerMiles: (stats.total_distance_feet || 0) / 5280,
+      totalFilms: stats?.totalFilms || 0,
+      totalDistanceFeet,
+      totalRunningTimeSeconds: round(stats?.totalRunningTimeSeconds || 0, 2),
+      averageDistancePerFilm: stats?.averageDistancePerFilm || 0,
+      careerMiles: totalDistanceFeet / 5280,
     };
   },
 
   yearlyStats: async () => {
-    const result = await pool.query(`
-      SELECT
-        year,
-        SUM(total_running_distance_feet)::int as total_distance_feet,
-        COUNT(*)::int as film_count
-      FROM films
-      GROUP BY year
-      ORDER BY year
-    `);
+    const rows = await getMongoDB()
+      .collection('films')
+      .aggregate([
+        {
+          $group: {
+            _id: '$year',
+            totalDistanceFeet: { $sum: '$totalRunningDistanceFeet' },
+            filmCount: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray();
 
-    return result.rows.map((row) => ({
-      year: row.year,
-      totalDistanceFeet: row.total_distance_feet || 0,
-      filmCount: row.film_count,
+    return rows.map((row) => ({
+      year: row._id,
+      totalDistanceFeet: row.totalDistanceFeet || 0,
+      filmCount: row.filmCount,
       films: async () => {
-        const filmResult = await pool.query('SELECT * FROM films WHERE year = $1', [row.year]);
-        return filmResult.rows.map(mapFilmRow);
+        const docs = await getMongoDB()
+          .collection('films')
+          .find({ year: row._id })
+          .sort({ id: 1 })
+          .toArray();
+        return docs.map((doc) => mapFilm(doc));
       },
     }));
   },
 
   topRunningFilms: async ({ limit = 10 }) => {
-    const result = await pool.query(
-      `
-      SELECT * FROM films
-      WHERE total_running_distance_feet > 0
-      ORDER BY total_running_distance_feet DESC
-      LIMIT $1
-    `,
-      [limit]
-    );
-    return result.rows.map(mapFilmRow);
+    const docs = await getMongoDB()
+      .collection('films')
+      .find({ totalRunningDistanceFeet: { $gt: 0 } })
+      .sort({ totalRunningDistanceFeet: -1, id: 1 })
+      .limit(limit)
+      .toArray();
+    return docs.map((doc) => mapFilm(doc));
   },
 
   topCpiFilms: async ({ limit = 10 }) => {
-    const result = await pool.query(
-      `
-      SELECT * FROM films
-      WHERE cpi_score IS NOT NULL
-      ORDER BY cpi_score DESC
-      LIMIT $1
-    `,
-      [limit]
-    );
-    return result.rows.map(mapFilmRow);
+    const docs = await getMongoDB()
+      .collection('films')
+      .find({ cpiScore: { $ne: null } })
+      .sort({ cpiScore: -1, id: 1 })
+      .limit(limit)
+      .toArray();
+    return docs.map((doc) => mapFilm(doc));
   },
 
-  // User Queries
-  user: async ({ id }) => {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-    return result.rows[0] ? mapUserRow(result.rows[0]) : null;
-  },
-
-  users: async () => {
-    const result = await pool.query('SELECT * FROM users');
-    return result.rows.map(mapUserRow);
-  },
-
-  // ============================================================================
-  // MONGODB QUERY RESOLVERS
-  // ============================================================================
-
-  // Running Instances (MongoDB)
+  // Running Instances
   runningInstances: async ({ filmId, intensity, tags, limit = 100, offset = 0 }) => {
     const db = getMongoDB();
     const query = {};
@@ -237,7 +181,7 @@ const resolvers = {
     return instances.map(mapMongoRunningInstance);
   },
 
-  // Film Metadata (MongoDB)
+  // Film Metadata
   filmMetadata: async ({ filmId }) => {
     const db = getMongoDB();
     const metadata = await db.collection('filmmetadata').findOne({ filmId });
@@ -250,54 +194,45 @@ const resolvers = {
     return metadata.map(mapMongoFilmMetadata);
   },
 
-  // Hybrid Queries (PostgreSQL + MongoDB)
+  // Film + scenes + metadata in one call
   filmWithScenes: async ({ id }) => {
-    // Get film from PostgreSQL
-    const filmResult = await pool.query('SELECT * FROM films WHERE id = $1', [id]);
-    if (!filmResult.rows[0]) return null;
+    const doc = await findFilm(id);
+    if (!doc) return null;
 
-    const film = mapFilmRow(filmResult.rows[0]);
-
-    // Get instances from MongoDB
     const db = getMongoDB();
-    const instances = await db
-      .collection('runninginstances')
-      .find({ filmId: parseInt(id) })
-      .sort({ rank: 1 })
-      .toArray();
-
-    // Get metadata from MongoDB
-    const metadata = await db.collection('filmmetadata').findOne({ filmId: parseInt(id) });
+    const [instances, metadata] = await Promise.all([
+      db.collection('runninginstances').find({ filmId: doc.id }).sort({ rank: 1 }).toArray(),
+      db.collection('filmmetadata').findOne({ filmId: doc.id }),
+    ]);
 
     return {
-      film,
+      film: mapFilm(doc),
       instances: instances.map(mapMongoRunningInstance),
       metadata: metadata ? mapMongoFilmMetadata(metadata) : null,
     };
   },
 
   topFilmsByIntensity: async ({ intensity, limit = 10 }) => {
-    // Get film IDs that have instances with this intensity
+    // Films with the most instances of this intensity, most first
     const db = getMongoDB();
-    const instances = await db
+    const ranked = await db
       .collection('runninginstances')
       .aggregate([
         { $match: { 'scene.intensity': intensity } },
         { $group: { _id: '$filmId', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
+        { $sort: { count: -1, _id: 1 } },
         { $limit: limit },
       ])
       .toArray();
 
-    const filmIds = instances.map((i) => i._id);
+    const filmIds = ranked.map((r) => r._id);
+    const docs = await db
+      .collection('films')
+      .find({ id: { $in: filmIds } })
+      .toArray();
+    const byId = new Map(docs.map((doc) => [doc.id, doc]));
 
-    // Get films from PostgreSQL
-    const result = await pool.query(
-      'SELECT * FROM films WHERE id = ANY($1) ORDER BY total_running_distance_feet DESC',
-      [filmIds]
-    );
-
-    return result.rows.map(mapFilmRow);
+    return filmIds.filter((id) => byId.has(id)).map((id) => mapFilm(byId.get(id)));
   },
 
   // ============================================================================
@@ -306,13 +241,33 @@ const resolvers = {
 
   // Film Mutations
   createFilm: async ({ title, year, runtimeMinutes, rottenTomatoesScore, posterUrl, imdbId }) => {
-    const result = await pool.query(
-      `INSERT INTO films (title, year, runtime_minutes, rotten_tomatoes_score, poster_url, imdb_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [title, year, runtimeMinutes, rottenTomatoesScore, posterUrl, imdbId]
-    );
-    return mapFilmRow(result.rows[0]);
+    const films = getMongoDB().collection('films');
+    const [last] = await films
+      .find({}, { projection: { id: 1 } })
+      .sort({ id: -1 })
+      .limit(1)
+      .toArray();
+    const now = new Date();
+
+    const fields = {
+      title,
+      year,
+      runtimeMinutes: runtimeMinutes ?? null,
+      rottenTomatoesScore: rottenTomatoesScore ?? null,
+      totalRunningDistanceFeet: 0,
+      posterUrl: posterUrl ?? null,
+      imdbId: imdbId ?? null,
+    };
+    const doc = {
+      id: (last?.id || 0) + 1,
+      ...fields,
+      ...deriveFilmStats(fields),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await films.insertOne(doc);
+    return mapFilm(doc);
   },
 
   updateFilm: async ({
@@ -324,49 +279,45 @@ const resolvers = {
     posterUrl,
     imdbId,
   }) => {
-    const updates = [];
-    const params = [];
-    let paramIndex = 1;
+    const existing = await findFilm(id);
+    if (!existing) throw new Error(`Film ${id} not found`);
 
-    if (title !== undefined) {
-      updates.push(`title = $${paramIndex++}`);
-      params.push(title);
-    }
-    if (year !== undefined) {
-      updates.push(`year = $${paramIndex++}`);
-      params.push(year);
-    }
-    if (runtimeMinutes !== undefined) {
-      updates.push(`runtime_minutes = $${paramIndex++}`);
-      params.push(runtimeMinutes);
-    }
-    if (rottenTomatoesScore !== undefined) {
-      updates.push(`rotten_tomatoes_score = $${paramIndex++}`);
-      params.push(rottenTomatoesScore);
-    }
-    if (posterUrl !== undefined) {
-      updates.push(`poster_url = $${paramIndex++}`);
-      params.push(posterUrl);
-    }
-    if (imdbId !== undefined) {
-      updates.push(`imdb_id = $${paramIndex++}`);
-      params.push(imdbId);
-    }
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (year !== undefined) updates.year = year;
+    if (runtimeMinutes !== undefined) updates.runtimeMinutes = runtimeMinutes;
+    if (rottenTomatoesScore !== undefined) updates.rottenTomatoesScore = rottenTomatoesScore;
+    if (posterUrl !== undefined) updates.posterUrl = posterUrl;
+    if (imdbId !== undefined) updates.imdbId = imdbId;
 
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    params.push(id);
-
-    const query = `UPDATE films SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
-    const result = await pool.query(query, params);
-    return mapFilmRow(result.rows[0]);
+    const doc = await getMongoDB()
+      .collection('films')
+      .findOneAndUpdate(
+        { id: existing.id },
+        {
+          $set: {
+            ...updates,
+            ...deriveFilmStats({ ...existing, ...updates }),
+            updatedAt: new Date(),
+          },
+        },
+        { returnDocument: 'after' }
+      );
+    return mapFilm(doc);
   },
 
   deleteFilm: async ({ id }) => {
-    await pool.query('DELETE FROM films WHERE id = $1', [id]);
-    return true;
+    const filmId = toFilmId(id);
+    if (filmId === null) return false;
+
+    const db = getMongoDB();
+    const result = await db.collection('films').deleteOne({ id: filmId });
+    await db.collection('runninginstances').deleteMany({ filmId });
+    await db.collection('filmmetadata').deleteMany({ filmId });
+    return result.deletedCount > 0;
   },
 
-  // Running Instance Mutations (kept for backward compatibility, but MongoDB is primary)
+  // Running Instance Mutations
   createRunningInstance: async ({
     filmId,
     sequenceNumber,
@@ -377,23 +328,41 @@ const resolvers = {
     intensity,
     location,
   }) => {
-    const result = await pool.query(
-      `INSERT INTO running_instances
-       (film_id, sequence_number, distance_feet, duration_seconds, timestamp_start, context, intensity, location)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [
-        filmId,
-        sequenceNumber,
-        distanceFeet,
-        durationSeconds,
-        timestampStart,
-        context,
-        intensity,
-        location,
-      ]
-    );
-    return mapRunningInstanceRow(result.rows[0]);
+    const db = getMongoDB();
+    const film = await db.collection('films').findOne({ id: filmId });
+    if (!film) throw new Error(`Film ${filmId} not found`);
+
+    const instances = db.collection('runninginstances');
+    const [last] = await instances
+      .find({}, { projection: { rank: 1 } })
+      .sort({ rank: -1 })
+      .limit(1)
+      .toArray();
+    const now = new Date();
+
+    const doc = {
+      filmId,
+      filmTitle: film.title,
+      filmYear: film.year,
+      rank: Math.max((last?.rank || 0) + 1, MANUAL_RANK_START),
+      sequenceNumber,
+      scene: {
+        context: context || '',
+        timestampStart: timestampStart ?? null,
+        timestampEnd: null,
+        intensity: intensity ?? null,
+        // Always an object, like the source data, so updateRunningInstance can set location.setting.
+        location: { setting: location ?? null, city: null, country: null },
+      },
+      measurement: { distanceFeet, durationSeconds, source: 'manual', calculatedAt: now },
+      tags: [],
+      sources: { ranking: MANUAL_SOURCE, description: MANUAL_SOURCE, distance: MANUAL_SOURCE },
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const { insertedId } = await instances.insertOne(doc);
+    return mapMongoRunningInstance({ ...doc, _id: insertedId });
   },
 
   updateRunningInstance: async ({
@@ -405,125 +374,122 @@ const resolvers = {
     intensity,
     location,
   }) => {
-    // Update in MongoDB if it's a MongoDB document
-    try {
-      const db = getMongoDB();
-      const updateFields = {};
-      if (distanceFeet !== undefined) updateFields['measurement.distanceFeet'] = distanceFeet;
-      if (durationSeconds !== undefined)
-        updateFields['measurement.durationSeconds'] = durationSeconds;
-      if (timestampStart !== undefined) updateFields['scene.timestampStart'] = timestampStart;
-      if (context !== undefined) updateFields['scene.context'] = context;
-      if (intensity !== undefined) updateFields['scene.intensity'] = intensity;
-      if (location !== undefined) updateFields['scene.location.setting'] = location;
+    if (!ObjectId.isValid(id)) throw new Error(`Running instance ${id} not found`);
 
-      const result = await db
-        .collection('runninginstances')
-        .findOneAndUpdate(
-          { _id: new ObjectId(id) },
-          { $set: updateFields },
-          { returnDocument: 'after' }
-        );
+    const updateFields = { updatedAt: new Date() };
+    if (distanceFeet !== undefined) updateFields['measurement.distanceFeet'] = distanceFeet;
+    if (durationSeconds !== undefined)
+      updateFields['measurement.durationSeconds'] = durationSeconds;
+    if (timestampStart !== undefined) updateFields['scene.timestampStart'] = timestampStart;
+    if (context !== undefined) updateFields['scene.context'] = context;
+    if (intensity !== undefined) updateFields['scene.intensity'] = intensity;
+    if (location !== undefined) updateFields['scene.location.setting'] = location;
 
-      if (result.value) {
-        return mapMongoRunningInstance(result.value);
-      }
-    } catch (_err) {
-      // Not a MongoDB ObjectId, try PostgreSQL
-    }
-
-    // Otherwise update in PostgreSQL
-    const updates = [];
-    const params = [];
-    let paramIndex = 1;
-
-    if (distanceFeet !== undefined) {
-      updates.push(`distance_feet = $${paramIndex++}`);
-      params.push(distanceFeet);
-    }
-    if (durationSeconds !== undefined) {
-      updates.push(`duration_seconds = $${paramIndex++}`);
-      params.push(durationSeconds);
-    }
-    if (timestampStart !== undefined) {
-      updates.push(`timestamp_start = $${paramIndex++}`);
-      params.push(timestampStart);
-    }
-    if (context !== undefined) {
-      updates.push(`context = $${paramIndex++}`);
-      params.push(context);
-    }
-    if (intensity !== undefined) {
-      updates.push(`intensity = $${paramIndex++}`);
-      params.push(intensity);
-    }
-    if (location !== undefined) {
-      updates.push(`location = $${paramIndex++}`);
-      params.push(location);
-    }
-
-    params.push(id);
-    const query = `UPDATE running_instances SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
-    const result = await pool.query(query, params);
-    return mapRunningInstanceRow(result.rows[0]);
+    // Driver 6 returns the updated document itself (null when nothing matched).
+    const doc = await getMongoDB()
+      .collection('runninginstances')
+      .findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updateFields },
+        { returnDocument: 'after' }
+      );
+    if (!doc) throw new Error(`Running instance ${id} not found`);
+    return mapMongoRunningInstance(doc);
   },
 
   deleteRunningInstance: async ({ id }) => {
-    await pool.query('DELETE FROM running_instances WHERE id = $1', [id]);
-    return true;
-  },
-
-  // User Mutations
-  createUser: async ({ username, email, password }) => {
-    // Hash password in production!
-    const result = await pool.query(
-      'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING *',
-      [username, email, password]
-    );
-    return mapUserRow(result.rows[0]);
+    if (!ObjectId.isValid(id)) return false;
+    const result = await getMongoDB()
+      .collection('runninginstances')
+      .deleteOne({ _id: new ObjectId(id) });
+    return result.deletedCount > 0;
   },
 };
 
 // ============================================================================
-// HELPER FUNCTIONS - PostgreSQL Mappers
+// HELPER FUNCTIONS
 // ============================================================================
 
-function mapFilmRow(row) {
+// Film ids are integers; GraphQL passes them as ID strings.
+function toFilmId(id) {
+  const filmId = Number.parseInt(id, 10);
+  return Number.isNaN(filmId) ? null : filmId;
+}
+
+async function findFilm(id) {
+  const filmId = toFilmId(id);
+  return filmId === null ? null : getMongoDB().collection('films').findOne({ id: filmId });
+}
+
+function filmFilterQuery(filter) {
+  const query = {};
+  if (!filter) return query;
+
+  const range = (field, op, value) => {
+    if (value !== null && value !== undefined) query[field] = { ...query[field], [op]: value };
+  };
+  range('year', '$gte', filter.minYear);
+  range('year', '$lte', filter.maxYear);
+  range('totalRunningDistanceFeet', '$gte', filter.minDistance);
+  range('totalRunningDistanceFeet', '$lte', filter.maxDistance);
+  range('cpiScore', '$gte', filter.minCpi);
+  range('cpiScore', '$lte', filter.maxCpi);
+  range('rottenTomatoesScore', '$gte', filter.minRottenTomatoes);
+  return query;
+}
+
+// Same ordering the API had on PostgreSQL: nulls last ascending, first descending.
+function compareForSort(a, b, direction) {
+  const aNull = a === null || a === undefined;
+  const bNull = b === null || b === undefined;
+  if (aNull || bNull) {
+    if (aNull && bNull) return 0;
+    return (aNull ? 1 : -1) * direction;
+  }
+  if (a < b) return -direction;
+  if (a > b) return direction;
+  return 0;
+}
+
+async function instanceCountsByFilm(db) {
+  const rows = await db
+    .collection('runninginstances')
+    .aggregate([{ $group: { _id: '$filmId', count: { $sum: 1 } } }])
+    .toArray();
+  return new Map(rows.map((row) => [row._id, row.count]));
+}
+
+function mapFilm(doc, instanceCounts) {
   return {
-    id: row.id,
-    title: row.title,
-    year: row.year,
-    runtimeMinutes: row.runtime_minutes,
-    rottenTomatoesScore: row.rotten_tomatoes_score,
-    totalRunningDistanceFeet: row.total_running_distance_feet || 0,
-    totalRunningTimeSeconds: parseFloat(row.total_running_time_seconds) || 0,
-    runningInstancesCount: async () => {
-      const db = getMongoDB();
-      return await db.collection('runninginstances').countDocuments({ filmId: row.id });
-    },
-    runningDensity: row.running_density ? parseFloat(row.running_density) : null,
-    cpiScore: row.cpi_score ? parseFloat(row.cpi_score) : null,
-    posterUrl: row.poster_url,
-    imdbId: row.imdb_id,
-    tmdbId: row.tmdb_id,
-    rottenTomatoesUrl: row.rotten_tomatoes_url,
-    wikipediaUrl: row.wikipedia_url,
-    youtubeTrailerUrl: row.youtube_trailer_url,
-    letterboxdUrl: row.letterboxd_url,
-    // Use MongoDB for running instances
+    id: doc.id,
+    title: doc.title,
+    year: doc.year,
+    runtimeMinutes: doc.runtimeMinutes,
+    rottenTomatoesScore: doc.rottenTomatoesScore,
+    totalRunningDistanceFeet: doc.totalRunningDistanceFeet || 0,
+    totalRunningTimeSeconds: doc.totalRunningTimeSeconds || 0,
+    runningInstancesCount: instanceCounts
+      ? instanceCounts.get(doc.id) || 0
+      : () => getMongoDB().collection('runninginstances').countDocuments({ filmId: doc.id }),
+    runningDensity: doc.runningDensity ?? null,
+    cpiScore: doc.cpiScore ?? null,
+    posterUrl: doc.posterUrl,
+    imdbId: doc.imdbId,
+    tmdbId: doc.tmdbId,
+    rottenTomatoesUrl: doc.rottenTomatoesUrl,
+    wikipediaUrl: doc.wikipediaUrl,
+    youtubeTrailerUrl: doc.youtubeTrailerUrl,
+    letterboxdUrl: doc.letterboxdUrl,
     runningInstances: async () => {
-      const db = getMongoDB();
-      const instances = await db
+      const instances = await getMongoDB()
         .collection('runninginstances')
-        .find({ filmId: row.id })
+        .find({ filmId: doc.id })
         .sort({ rank: 1 })
         .toArray();
       return instances.map(mapMongoRunningInstance);
     },
-    // Use MongoDB for film metadata
     metadata: async () => {
-      const db = getMongoDB();
-      const metadata = await db.collection('filmmetadata').findOne({ filmId: row.id });
+      const metadata = await getMongoDB().collection('filmmetadata').findOne({ filmId: doc.id });
       return metadata ? mapMongoFilmMetadata(metadata) : null;
     },
     // Data provenance
@@ -531,7 +497,7 @@ function mapFilmRow(row) {
       metadata: {
         provider: 'TMDB',
         url: 'https://www.themoviedb.org',
-        retrievedAt: row.created_at?.toISOString(),
+        retrievedAt: doc.createdAt?.toISOString(),
         methodology: null,
       },
       runningDistance: {
@@ -544,43 +510,10 @@ function mapFilmRow(row) {
         url: 'https://www.themoviedb.org',
       },
     }),
-    createdAt: row.created_at?.toISOString(),
-    updatedAt: row.updated_at?.toISOString(),
+    createdAt: doc.createdAt?.toISOString(),
+    updatedAt: doc.updatedAt?.toISOString(),
   };
 }
-
-function mapRunningInstanceRow(row) {
-  return {
-    id: row.id,
-    filmId: row.film_id,
-    film: async () => {
-      const result = await pool.query('SELECT * FROM films WHERE id = $1', [row.film_id]);
-      return result.rows[0] ? mapFilmRow(result.rows[0]) : null;
-    },
-    sequenceNumber: row.sequence_number,
-    distanceFeet: row.distance_feet,
-    durationSeconds: parseFloat(row.duration_seconds),
-    timestampStart: row.timestamp_start,
-    context: row.context,
-    intensity: row.intensity,
-    location: row.location,
-    createdAt: row.created_at?.toISOString(),
-  };
-}
-
-function mapUserRow(row) {
-  return {
-    id: row.id,
-    username: row.username,
-    email: row.email,
-    createdAt: row.created_at?.toISOString(),
-    lastLogin: row.last_login?.toISOString(),
-  };
-}
-
-// ============================================================================
-// HELPER FUNCTIONS - MongoDB Mappers
-// ============================================================================
 
 function mapMongoRunningInstance(doc) {
   return {
@@ -626,10 +559,9 @@ function mapMongoRunningInstance(doc) {
       : null,
     tags: doc.tags || [],
     sources: doc.sources,
-    // Resolve film from PostgreSQL
     film: async () => {
-      const result = await pool.query('SELECT * FROM films WHERE id = $1', [doc.filmId]);
-      return result.rows[0] ? mapFilmRow(result.rows[0]) : null;
+      const film = await getMongoDB().collection('films').findOne({ id: doc.filmId });
+      return film ? mapFilm(film) : null;
     },
     createdAt: doc.createdAt?.toISOString(),
     updatedAt: doc.updatedAt?.toISOString(),

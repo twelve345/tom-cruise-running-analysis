@@ -3,7 +3,7 @@ console.log('=== BACKEND STARTUP ===');
 console.log('Time:', new Date().toISOString());
 console.log('Node version:', process.version);
 console.log('PORT env:', process.env.PORT);
-console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('MONGO_URL exists:', !!process.env.MONGO_URL);
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('=======================');
 
@@ -26,8 +26,7 @@ const { createHandler } = require('graphql-http/lib/use/express');
 const cors = require('cors');
 const schema = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
-const { connectMongo } = require('./db/mongodb');
-const pool = require('./db/postgres');
+const { connectMongo, getMongoDB, closeMongo } = require('./db/mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -70,22 +69,22 @@ app.use(express.json());
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
-  let postgresStatus = 'unknown';
+  let mongoStatus = 'unknown';
 
   try {
-    await pool.query('SELECT 1');
-    postgresStatus = 'connected';
+    await getMongoDB().command({ ping: 1 });
+    mongoStatus = 'connected';
   } catch (error) {
-    postgresStatus = `error: ${error.message}`;
+    mongoStatus = `error: ${error.message}`;
   }
 
-  const isHealthy = postgresStatus === 'connected';
+  const isHealthy = mongoStatus === 'connected';
 
   res.status(isHealthy ? 200 : 503).json({
     status: isHealthy ? 'healthy' : 'degraded',
     timestamp: new Date().toISOString(),
     services: {
-      postgres: postgresStatus,
+      mongo: mongoStatus,
       server: 'running',
     },
   });
@@ -174,6 +173,8 @@ app.use((err, req, res, _next) => {
   });
 });
 
+let server;
+
 // Initialize connections and start server
 async function startServer() {
   console.log('🚀 Starting Tom Cruise Running Analysis API...\n');
@@ -182,7 +183,7 @@ async function startServer() {
   console.log('=== ATTEMPTING TO START SERVER ===');
   console.log('Binding to PORT:', PORT);
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  server = app.listen(PORT, '0.0.0.0', () => {
     console.log('=== SERVER LISTENING ===');
     console.log('Port:', PORT);
     console.log('Address: 0.0.0.0');
@@ -201,39 +202,28 @@ async function startServer() {
     console.error('====================');
   });
 
-  // Now try to connect to databases (non-blocking for server startup)
-  try {
-    console.log('📊 Connecting to PostgreSQL...');
-    await pool.query('SELECT NOW()');
-    console.log('✓ PostgreSQL connected successfully\n');
-  } catch (error) {
-    console.error('❌ PostgreSQL connection failed:', error.message);
-    console.error('   Server is running but database queries will fail.\n');
-  }
-
-  // Connect to MongoDB (optional, for future features)
+  // MongoDB is the only datastore: without it the API cannot serve anything, so exit and
+  // let the platform restart us (Railway restartPolicyType ON_FAILURE).
   try {
     console.log('🍃 Connecting to MongoDB...');
     await connectMongo();
     console.log('✓ MongoDB connected successfully\n');
   } catch (mongoError) {
-    console.warn('⚠️  MongoDB connection failed (optional service):', mongoError.message);
-    console.warn('   The API will work without MongoDB for now.\n');
+    console.error('❌ MongoDB connection failed:', mongoError.message);
+    process.exit(1);
   }
 }
 
 // Handle shutdown gracefully
-process.on('SIGTERM', async () => {
-  console.log('\n🛑 SIGTERM received, shutting down gracefully...');
-  await pool.end();
+async function shutdown(signal) {
+  console.log(`\n🛑 ${signal} received, shutting down gracefully...`);
+  if (server) await new Promise((resolve) => server.close(resolve));
+  await closeMongo();
   process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-  console.log('\n🛑 SIGINT received, shutting down gracefully...');
-  await pool.end();
-  process.exit(0);
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Start the server
 startServer();

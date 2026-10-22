@@ -26,9 +26,7 @@ This project is built with a modern, scalable architecture designed for a rich, 
 
 - **Frontend**: React, Chart.js, Tailwind CSS
 - **Backend**: Node.js with a GraphQL API
-- **Databases**:
-  - **PostgreSQL**: For structured data like user authentication and filmography details.
-  - **MongoDB**: For flexible data, such as user-customizable dashboards.
+- **Database**: MongoDB, for films, running scenes and film metadata.
 - **Infrastructure & DevOps**:
   - **Terraform**: For Infrastructure as Code (IaC) to manage cloud resources.
 - **Containerization**: Docker and Docker Compose

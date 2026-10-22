@@ -16,7 +16,5 @@ CMD [ "npm", "run", "dev" ]
 FROM base AS production
 COPY . .
 RUN npm ci --only=production
-# Ensure startup script is executable
-RUN chmod +x scripts/startup.sh
 EXPOSE 4000
 CMD [ "npm", "run", "start:railway" ]

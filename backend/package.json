@@ -5,13 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "start:railway": "sh scripts/startup.sh && node index.js",
+    "start:railway": "(node scripts/seedMongo.js || echo 'WARNING: MongoDB sync failed; starting with existing data') && node index.js",
     "dev": "nodemon index.js",
-    "db:init": "node scripts/initDb.js",
-    "db:seed": "node scripts/seedDb.js",
-    "db:seed-mongo": "node scripts/seedMongo.js",
-    "db:setup": "npm run db:init && npm run db:seed",
-    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seedMongo.js",
     "schema:export": "node scripts/exportSchema.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -24,8 +20,7 @@
     "express": "^4.18.2",
     "graphql": "^16.8.1",
     "graphql-http": "^1.22.0",
-    "mongodb": "^6.3.0",
-    "pg": "^8.11.3"
+    "mongodb": "^6.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

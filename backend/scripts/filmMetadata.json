@@ -1,0 +1,116 @@
+[
+  {
+    "filmTitle": "Mission: Impossible III",
+    "filmYear": 2006,
+    "trivia": [
+      {
+        "category": "stunts",
+        "fact": "Tom Cruise performed his own stunts for the Shanghai rooftop chase scene, one of the most iconic running sequences in cinema.",
+        "source": "Movies Films & Flix",
+        "verified": true
+      },
+      {
+        "category": "production",
+        "fact": "Director J.J. Abrams commented \"I loved watching you run\" during filming of the #1 ranked running scene.",
+        "source": "Movies Films & Flix Analysis",
+        "verified": true
+      },
+      {
+        "category": "production",
+        "fact": "The famous running scene took 6-7 takes to get perfect, with a Spidercam rig built specifically for the scene.",
+        "source": "Movies Films & Flix",
+        "verified": true
+      }
+    ],
+    "runningAnalysis": {
+      "formBreakdown": {
+        "overallAnalysis": "Peak Tom Cruise running form. Elbows sharp, eyes forward, feet a blur. This film showcases the fastest Cruise has ever looked on screen."
+      },
+      "speedAnalysis": "Clocked at running 15.3 mph (24.6 km/h) during the famous running sequence at age 43.",
+      "comparisonToAthletes": "Running at speeds comparable to Olympic sprinters during action sequences."
+    }
+  },
+  {
+    "filmTitle": "Collateral",
+    "filmYear": 2004,
+    "trivia": [
+      {
+        "category": "stunts",
+        "fact": "The famous chair throw scene where Cruise wipes out was unplanned. Director Michael Mann kept it in the final cut for authenticity.",
+        "source": "Movies Films & Flix",
+        "verified": true
+      },
+      {
+        "category": "production",
+        "fact": "Ranked #2 overall for the window crash scene - one of the most realistic-looking stunts in the franchise.",
+        "source": "Movies Films & Flix Ranking",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "filmTitle": "Vanilla Sky",
+    "filmYear": 2001,
+    "trivia": [
+      {
+        "category": "production",
+        "fact": "Times Square was closed for 3 hours on a Sunday morning in November for the iconic empty running scene.",
+        "source": "Movies Films & Flix",
+        "verified": true
+      },
+      {
+        "category": "trivia",
+        "fact": "The empty Times Square scene symbolizes the character's fear of being alone, manifesting in his dreams.",
+        "source": "Director Cameron Crowe",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "filmTitle": "The Firm",
+    "filmYear": 1993,
+    "trivia": [
+      {
+        "category": "stunts",
+        "fact": "First film to fully showcase Tom Cruise's soon-to-be-famous running form (elbows and knees).",
+        "source": "Movies Films & Flix",
+        "verified": true
+      }
+    ],
+    "runningAnalysis": {
+      "formBreakdown": {
+        "overallAnalysis": "The film where the iconic Tom Cruise running style was first on full display."
+      }
+    }
+  },
+  {
+    "filmTitle": "Risky Business",
+    "filmYear": 1983,
+    "trivia": [
+      {
+        "category": "trivia",
+        "fact": "The 7-second cigarette-smoking running scene in sunglasses is described as \"when Cruise became Tom Cruise\".",
+        "source": "Movies Films & Flix",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "filmTitle": "Mission: Impossible - Fallout",
+    "filmYear": 2018,
+    "trivia": [
+      {
+        "category": "stunts",
+        "fact": "Tom Cruise broke his ankle during the rooftop running scene but continued filming. He said \"I loved doing this, but it hurt.\"",
+        "source": "Movies Films & Flix",
+        "verified": true
+      },
+      {
+        "category": "stunts",
+        "fact": "The broken ankle happened at the very end of the famous rooftop jump scene. The moment is visible in the final film.",
+        "source": "Behind the scenes footage",
+        "verified": true
+      }
+    ]
+  }
+]
