@@ -169,14 +169,6 @@ type DataSourceInfo {
   methodology: String
 }
 
-type User {
-  id: ID!
-  username: String!
-  email: String!
-  createdAt: String
-  lastLogin: String
-}
-
 type FilmStats {
   totalFilms: Int!
   totalDistanceFeet: Int!
@@ -240,8 +232,6 @@ type Query {
   allFilmMetadata: [FilmMetadata!]!
   filmWithScenes(id: ID!): FilmWithScenes
   topFilmsByIntensity(intensity: String!, limit: Int): [Film!]!
-  user(id: ID!): User
-  users: [User!]!
 }
 
 type Mutation {
@@ -251,5 +241,4 @@ type Mutation {
   createRunningInstance(filmId: Int!, sequenceNumber: Int!, distanceFeet: Int!, durationSeconds: Float!, timestampStart: String, context: String, intensity: String, location: String): RunningInstance!
   updateRunningInstance(id: ID!, distanceFeet: Int, durationSeconds: Float, timestampStart: String, context: String, intensity: String, location: String): RunningInstance!
   deleteRunningInstance(id: ID!): Boolean!
-  createUser(username: String!, email: String!, password: String!): User!
 }

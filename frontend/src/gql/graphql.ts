@@ -189,7 +189,6 @@ export type Mutation = {
   __typename?: 'Mutation';
   createFilm: Film;
   createRunningInstance: RunningInstance;
-  createUser: User;
   deleteFilm: Scalars['Boolean']['output'];
   deleteRunningInstance: Scalars['Boolean']['output'];
   updateFilm: Film;
@@ -214,12 +213,6 @@ export type MutationCreateRunningInstanceArgs = {
   location?: InputMaybe<Scalars['String']['input']>;
   sequenceNumber: Scalars['Int']['input'];
   timestampStart?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type MutationCreateUserArgs = {
-  email: Scalars['String']['input'];
-  password: Scalars['String']['input'];
-  username: Scalars['String']['input'];
 };
 
 export type MutationDeleteFilmArgs = {
@@ -266,8 +259,6 @@ export type Query = {
   topCpiFilms: Array<Film>;
   topFilmsByIntensity: Array<Film>;
   topRunningFilms: Array<Film>;
-  user?: Maybe<User>;
-  users: Array<User>;
   yearlyStats: Array<YearStats>;
 };
 
@@ -326,10 +317,6 @@ export type QueryTopFilmsByIntensityArgs = {
 
 export type QueryTopRunningFilmsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type QueryUserArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type RunningAnalysis = {
@@ -391,15 +378,6 @@ export type TriviaItem = {
   source?: Maybe<Scalars['String']['output']>;
   sourceUrl?: Maybe<Scalars['String']['output']>;
   verified?: Maybe<Scalars['Boolean']['output']>;
-};
-
-export type User = {
-  __typename?: 'User';
-  createdAt?: Maybe<Scalars['String']['output']>;
-  email: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  lastLogin?: Maybe<Scalars['String']['output']>;
-  username: Scalars['String']['output'];
 };
 
 export type YearStats = {

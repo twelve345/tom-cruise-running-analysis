@@ -273,7 +273,6 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                   <li>• Node.js</li>
                   <li>• Express</li>
                   <li>• GraphQL</li>
-                  <li>• PostgreSQL</li>
                   <li>• MongoDB</li>
                 </ul>
               </div>
