@@ -1,0 +1,19 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/twelve345/tom-cruise-running-analysis/blob/dev/.fleet/vex.openvex.json",
+  "author": "twelve345",
+  "timestamp": "2026-10-22T00:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-93687",
+        "aliases": ["GHSA-vfj7-8cjw-p6xm"]
+      },
+      "products": [{ "@id": "pkg:npm/braces@3.0.3" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "braces is reached only through @graphql-codegen/cli (a frontend devDependency run by hand via `npm run codegen`), through micromatch and @graphql-tools' globby/fast-glob, to expand the document globs hard-coded in frontend/codegen.ts (src/**/*.ts, src/**/*.tsx). No user or network input reaches braces, and no production image contains it: the backend image installs --omit=dev and the frontend image ships only the static build. No braces release fixes the advisory (3.0.3 is the latest), and every @graphql-codegen/cli release depends on micromatch."
+    }
+  ]
+}
