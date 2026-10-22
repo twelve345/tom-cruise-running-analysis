@@ -1,0 +1,36 @@
+# Moves a ticket's board card to In Progress when its branch is created — GitHub has no
+# native Projects trigger for branch creation. Thin caller of abacus-fleet-control's shared
+# board-set-status action (twelve345/abacus-fleet-control, conventions §15); no checkout, fetched
+# cross-repo via that repo's Actions access grant. Needs the FLEET_BOARDS_TOKEN Actions secret
+# (classic PAT with project write — the default GITHUB_TOKEN can't write user-owned Projects v2).
+name: board-status
+
+on: create
+
+permissions:
+  contents: read
+
+jobs:
+  set-in-progress:
+    # `on: create` also fires on tag creation, and the create event has no branch/tag trigger
+    # filter — so guard here to run only for branch refs. Skips tag pushes with no runner
+    # allocated and no FLEET_BOARDS_TOKEN injected into a job that would only no-op.
+    # Branch refs only, and only names that can be ticket branches (a leading digit): a
+    # skipped job starts no runner and bills nothing (abacus-fleet-control#505, §15).
+    if: >-
+      github.ref_type == 'branch' && (
+      startsWith(github.ref_name, '0') || startsWith(github.ref_name, '1') ||
+      startsWith(github.ref_name, '2') || startsWith(github.ref_name, '3') ||
+      startsWith(github.ref_name, '4') || startsWith(github.ref_name, '5') ||
+      startsWith(github.ref_name, '6') || startsWith(github.ref_name, '7') ||
+      startsWith(github.ref_name, '8') || startsWith(github.ref_name, '9'))
+    # Hosted and HARDCODED (§11, #422): holds FLEET_BOARDS_TOKEN — must not be reroutable onto the pool.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: twelve345/abacus-fleet-control/.github/actions/board-set-status@main
+        with:
+          ref-name: ${{ github.ref_name }}
+          ref-type: ${{ github.ref_type }}
+          repo: ${{ github.repository }}
+          github-token: ${{ secrets.FLEET_BOARDS_TOKEN }}
