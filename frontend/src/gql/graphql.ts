@@ -486,13 +486,6 @@ export type GetVisualizationDataQueryVariables = Exact<{ [key: string]: never }>
 
 export type GetVisualizationDataQuery = {
   __typename?: 'Query';
-  yearlyStats: Array<{
-    __typename?: 'YearStats';
-    year: number;
-    totalDistanceFeet: number;
-    filmCount: number;
-    films?: Array<{ __typename?: 'Film'; title: string; totalRunningDistanceFeet: number }> | null;
-  }>;
   films: Array<{
     __typename?: 'Film';
     id: string;
@@ -503,39 +496,6 @@ export type GetVisualizationDataQuery = {
     cpiScore?: number | null;
     runningDensity?: number | null;
     runtimeMinutes?: number | null;
-  }>;
-};
-
-export type GetTopRunningFilmsQueryVariables = Exact<{
-  limit?: InputMaybe<Scalars['Int']['input']>;
-}>;
-
-export type GetTopRunningFilmsQuery = {
-  __typename?: 'Query';
-  topRunningFilms: Array<{
-    __typename?: 'Film';
-    id: string;
-    title: string;
-    year: number;
-    totalRunningDistanceFeet: number;
-    rottenTomatoesScore?: number | null;
-  }>;
-};
-
-export type GetTopCpiFilmsQueryVariables = Exact<{
-  limit?: InputMaybe<Scalars['Int']['input']>;
-}>;
-
-export type GetTopCpiFilmsQuery = {
-  __typename?: 'Query';
-  topCpiFilms: Array<{
-    __typename?: 'Film';
-    id: string;
-    title: string;
-    year: number;
-    totalRunningDistanceFeet: number;
-    rottenTomatoesScore?: number | null;
-    cpiScore?: number | null;
   }>;
 };
 
@@ -794,29 +754,6 @@ export const GetVisualizationDataDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'yearlyStats' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'year' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalDistanceFeet' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'filmCount' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'films' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'title' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'totalRunningDistanceFeet' } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
             name: { kind: 'Name', value: 'films' },
             arguments: [
               {
@@ -844,90 +781,3 @@ export const GetVisualizationDataDocument = {
     },
   ],
 } as unknown as DocumentNode<GetVisualizationDataQuery, GetVisualizationDataQueryVariables>;
-export const GetTopRunningFilmsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'GetTopRunningFilms' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'topRunningFilms' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'limit' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'title' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'year' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalRunningDistanceFeet' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'rottenTomatoesScore' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<GetTopRunningFilmsQuery, GetTopRunningFilmsQueryVariables>;
-export const GetTopCpiFilmsDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'GetTopCpiFilms' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'topCpiFilms' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'limit' },
-                value: { kind: 'Variable', name: { kind: 'Name', value: 'limit' } },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'title' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'year' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalRunningDistanceFeet' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'rottenTomatoesScore' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'cpiScore' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode<GetTopCpiFilmsQuery, GetTopCpiFilmsQueryVariables>;

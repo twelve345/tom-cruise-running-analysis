@@ -2,11 +2,11 @@ import React, { useMemo } from 'react';
 import { Group } from '@visx/group';
 import { BarGroup } from '@visx/shape';
 import { scaleBand, scaleLinear, scaleOrdinal } from '@visx/scale';
-import { useTooltip } from '@visx/tooltip';
-import { localPoint } from '@visx/event';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { ChartTooltip } from '../shared/ChartTooltip';
+import { useChartTooltip } from '../shared/useChartTooltip';
+import { innerSize, domainMax } from '../shared/chartLayout';
 import { AnimatedBar } from '../shared/AnimatedBar';
 import { colors } from '../shared/chartTheme';
 
@@ -26,8 +26,16 @@ interface DecadeStats {
 }
 
 export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data }) => {
-  const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
-    useTooltip<{ key: string; value: number; decade: string }>();
+  const {
+    containerRef,
+    containerBounds,
+    tooltipOpen,
+    tooltipLeft,
+    tooltipTop,
+    tooltipData,
+    hideTooltip,
+    showTooltipAt,
+  } = useChartTooltip<{ key: string; value: number; decade: string }>();
 
   // Aggregate data by decade
   const aggregatedData = useMemo(() => {
@@ -71,8 +79,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
     <ChartWrapper height={400}>
       {({ width, height }) => {
         const margin = { top: 40, right: 30, bottom: 50, left: 60 };
-        const xMax = width - margin.left - margin.right;
-        const yMax = height - margin.top - margin.bottom;
+        const { xMax, yMax } = innerSize(width, height, margin);
 
         // Scales
         const x0Scale = scaleBand<string>({
@@ -88,7 +95,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
         });
 
         const yScale = scaleLinear<number>({
-          domain: [0, Math.max(...aggregatedData.map((d) => Math.max(d.Average, d.Total)))],
+          domain: [0, domainMax(aggregatedData.map((d) => Math.max(d.Average, d.Total)))],
           range: [yMax, 0],
           nice: true,
         });
@@ -105,7 +112,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={containerRef} width={width} height={height}>
               <Group top={margin.top} left={margin.left}>
                 <DarkAxisBottom top={yMax} scale={x0Scale} tickFormat={(v) => v} />
                 <DarkAxisLeft scale={yScale} tickFormat={(v) => `${v}`} label="Distance (feet)" />
@@ -125,7 +132,7 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
                       <Group key={`bar-group-${barGroup.index}-${barGroup.x0}`} left={barGroup.x0}>
                         {barGroup.bars.map((bar) => (
                           <AnimatedBar
-                            key={`bar-group-bar-${barGroup.index}-${bar.index}-${bar.value}-${bar.key}`}
+                            key={`bar-group-bar-${barGroup.index}-${bar.key}`}
                             x={bar.x}
                             y={bar.y}
                             width={bar.width}
@@ -133,19 +140,14 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
                             fill={bar.color}
                             delay={bar.index * 100}
                             onMouseLeave={() => hideTooltip()}
-                            onMouseEnter={(event) => {
-                              const point = localPoint(event);
-                              showTooltip({
-                                tooltipData: {
-                                  key: bar.key,
-                                  value: bar.value,
-                                  decade: getDecade(aggregatedData[barGroup.index]),
-                                },
-                                tooltipLeft: point?.x,
-                                tooltipTop: point?.y,
-                              });
-                            }}
-                            className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                            onMouseEnter={(event) =>
+                              showTooltipAt(event, {
+                                key: bar.key,
+                                value: bar.value,
+                                decade: getDecade(aggregatedData[barGroup.index]),
+                              })
+                            }
+                            className="hover:opacity-80 cursor-pointer"
                           />
                         ))}
                       </Group>
@@ -169,7 +171,11 @@ export const DecadeBreakdownChart: React.FC<DecadeBreakdownChartProps> = ({ data
             </svg>
 
             {tooltipOpen && tooltipData && (
-              <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>
+              <ChartTooltip
+                containerBounds={containerBounds}
+                left={tooltipLeft ?? 0}
+                top={tooltipTop ?? 0}
+              >
                 <div className="font-bold text-slate-200">{tooltipData.decade}</div>
                 <div className="text-slate-300">
                   {tooltipData.key}:{' '}

@@ -33,24 +33,13 @@ export const useFilteredChartData = <T extends ChartFilmData>(films: T[], filter
         return false;
       }
 
-      // 3. Rotten Tomatoes Score Filter
-      // If film has no score, we generally include it unless we want strict filtering.
-      // However, the existing logic in FilmographyExplorer excludes them if they don't match.
-      // Let's assume if it has a score, check it. If not, maybe keep it?
-      // Replicating FilmographyExplorer logic:
+      // 3. Rotten Tomatoes Score Filter. Same rule as FilmographyExplorer: a film with a
+      // score must fall inside the range; a film without one is kept.
       if (film.rottenTomatoesScore !== null && film.rottenTomatoesScore !== undefined) {
         if (
           film.rottenTomatoesScore < filters.rtScore[0] ||
           film.rottenTomatoesScore > filters.rtScore[1]
         ) {
-          return false;
-        }
-      } else {
-        // If no score, and filter is NOT default (0-100), maybe exclude?
-        // Or just always include?
-        // Let's stick to: if filter is 0-100, include. If user narrowed it, exclude nulls.
-        const isDefaultScoreFilter = filters.rtScore[0] === 0 && filters.rtScore[1] === 100;
-        if (!isDefaultScoreFilter) {
           return false;
         }
       }

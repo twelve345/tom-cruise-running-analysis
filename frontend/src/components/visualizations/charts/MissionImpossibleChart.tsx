@@ -3,10 +3,11 @@ import { Group } from '@visx/group';
 import { LinePath } from '@visx/shape';
 import { GlyphCircle } from '@visx/glyph';
 import { scalePoint, scaleLinear } from '@visx/scale';
-import { useTooltip } from '@visx/tooltip';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { DarkAxisBottom, DarkAxisLeft, DarkAxisRight } from '../shared/DarkThemeAxis';
 import { ChartTooltip } from '../shared/ChartTooltip';
+import { useChartTooltip } from '../shared/useChartTooltip';
+import { innerSize, domainMax } from '../shared/chartLayout';
 import { colors } from '../shared/chartTheme';
 import { curveMonotoneX } from '@visx/curve';
 
@@ -22,8 +23,16 @@ interface MissionImpossibleChartProps {
 }
 
 export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ data }) => {
-  const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
-    useTooltip<FilmData>();
+  const {
+    containerRef,
+    containerBounds,
+    tooltipOpen,
+    tooltipLeft,
+    tooltipTop,
+    tooltipData,
+    hideTooltip,
+    showTooltipAt,
+  } = useChartTooltip<FilmData>();
 
   // Filter for MI films and sort by year
   const miData = useMemo(() => {
@@ -46,8 +55,7 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
     <ChartWrapper height={450}>
       {({ width, height }) => {
         const margin = { top: 20, right: 60, bottom: 100, left: 60 };
-        const xMax = width - margin.left - margin.right;
-        const yMax = height - margin.top - margin.bottom;
+        const { xMax, yMax } = innerSize(width, height, margin);
 
         // Scales
         const xScale = scalePoint<string>({
@@ -58,7 +66,7 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
 
         const yDistanceScale = scaleLinear<number>({
           range: [yMax, 0],
-          domain: [0, Math.max(...miData.map(getDistance)) * 1.1],
+          domain: [0, domainMax(miData.map(getDistance), 1.1)],
           nice: true,
         });
 
@@ -70,7 +78,7 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={containerRef} width={width} height={height}>
               <Group top={margin.top} left={margin.left}>
                 <DarkAxisBottom
                   top={yMax}
@@ -111,13 +119,7 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
                     stroke={colors.slate[900]}
                     strokeWidth={2}
                     onMouseLeave={() => hideTooltip()}
-                    onMouseEnter={(event) => {
-                      showTooltip({
-                        tooltipData: d,
-                        tooltipLeft: event.clientX,
-                        tooltipTop: event.clientY,
-                      });
-                    }}
+                    onMouseEnter={(event) => showTooltipAt(event, d)}
                   />
                 ))}
 
@@ -141,13 +143,7 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
                     stroke={colors.slate[900]}
                     strokeWidth={2}
                     onMouseLeave={() => hideTooltip()}
-                    onMouseEnter={(event) => {
-                      showTooltip({
-                        tooltipData: d,
-                        tooltipLeft: event.clientX,
-                        tooltipTop: event.clientY,
-                      });
-                    }}
+                    onMouseEnter={(event) => showTooltipAt(event, d)}
                   />
                 ))}
 
@@ -167,7 +163,11 @@ export const MissionImpossibleChart: React.FC<MissionImpossibleChartProps> = ({ 
             </svg>
 
             {tooltipOpen && tooltipData && (
-              <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>
+              <ChartTooltip
+                containerBounds={containerBounds}
+                left={tooltipLeft ?? 0}
+                top={tooltipTop ?? 0}
+              >
                 <div className="font-bold text-amber-400">
                   {tooltipData.title} ({tooltipData.year})
                 </div>

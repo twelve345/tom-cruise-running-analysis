@@ -15,6 +15,20 @@ interface AxisProps {
   tickFormat?: (value: any) => string;
 }
 
+// Bottom-axis labels need roughly this much horizontal room each.
+const MIN_TICK_SPACING = 80;
+
+/**
+ * Cap the tick count by the axis's pixel width so labels don't overlap on narrow
+ * screens. visx thins band/point axes by numTicks too, so this covers both scale kinds.
+ * 10 is visx's default.
+ */
+const fitTicks = (scale: AxisProps['scale'], numTicks = 10) => {
+  const [start, end] = scale.range();
+  const budget = Math.floor(Math.abs(end - start) / MIN_TICK_SPACING);
+  return Math.max(2, Math.min(numTicks, budget));
+};
+
 export const DarkAxisBottom: React.FC<AxisProps> = ({
   scale,
   label,
@@ -37,7 +51,7 @@ export const DarkAxisBottom: React.FC<AxisProps> = ({
     labelProps={axisStyles.bottom.label}
     hideAxisLine={hideAxisLine}
     hideTicks={hideTicks}
-    numTicks={numTicks}
+    numTicks={fitTicks(scale, numTicks)}
     tickFormat={tickFormat}
   />
 );

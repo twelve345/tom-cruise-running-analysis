@@ -8,6 +8,7 @@ interface AnimatedBarProps {
   fill: string;
   delay?: number;
   isHorizontal?: boolean;
+  className?: string;
   onMouseEnter?: (event: React.MouseEvent<SVGRectElement>) => void;
   onMouseLeave?: (event: React.MouseEvent<SVGRectElement>) => void;
 }
@@ -20,6 +21,7 @@ export const AnimatedBar: React.FC<AnimatedBarProps> = ({
   fill,
   delay = 0,
   isHorizontal = false,
+  className = '',
   onMouseEnter,
   onMouseLeave,
 }) => {
@@ -53,7 +55,7 @@ export const AnimatedBar: React.FC<AnimatedBarProps> = ({
       fill={fill}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className="transition-all duration-700 ease-out"
+      className={`transition-all duration-700 ease-out ${className}`}
     />
   );
 };

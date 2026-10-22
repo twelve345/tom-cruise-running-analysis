@@ -17,9 +17,7 @@ type Documents = {
   '\n  query GetFilms($sortBy: FilmSortField, $sortOrder: SortOrder, $filter: FilmFilterInput) {\n    films(sortBy: $sortBy, sortOrder: $sortOrder, filter: $filter, limit: 100) {\n      id\n      title\n      year\n      runtimeMinutes\n      totalRunningDistanceFeet\n      totalRunningTimeSeconds\n      runningInstancesCount\n      runningDensity\n      cpiScore\n      rottenTomatoesScore\n      posterUrl\n      imdbId\n      tmdbId\n      rottenTomatoesUrl\n      wikipediaUrl\n      youtubeTrailerUrl\n      letterboxdUrl\n    }\n  }\n': typeof types.GetFilmsDocument;
   '\n  query GetRunningInstances($filmId: Int!, $limit: Int) {\n    runningInstances(filmId: $filmId, limit: $limit) {\n      id\n      rank\n      filmTitle\n      filmYear\n      sequenceNumber\n      scene {\n        context\n        timestampStart\n        timestampEnd\n        intensity\n        location {\n          setting\n          city\n          country\n        }\n      }\n      measurement {\n        distanceFeet\n        durationSeconds\n        confidence\n      }\n      media {\n        youtubeUrl\n        youtubeTimestamp\n      }\n      metadata {\n        behindTheScenes\n      }\n      tags\n      sources {\n        ranking {\n          provider\n          url\n          author\n        }\n      }\n    }\n  }\n': typeof types.GetRunningInstancesDocument;
   '\n  query GetFilmStats {\n    filmStats {\n      totalDistanceFeet\n      totalRunningTimeSeconds\n      careerMiles\n    }\n  }\n': typeof types.GetFilmStatsDocument;
-  '\n  query GetVisualizationData {\n    yearlyStats {\n      year\n      totalDistanceFeet\n      filmCount\n      films {\n        title\n        totalRunningDistanceFeet\n      }\n    }\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n': typeof types.GetVisualizationDataDocument;
-  '\n  query GetTopRunningFilms($limit: Int) {\n    topRunningFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n    }\n  }\n': typeof types.GetTopRunningFilmsDocument;
-  '\n  query GetTopCpiFilms($limit: Int) {\n    topCpiFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n    }\n  }\n': typeof types.GetTopCpiFilmsDocument;
+  '\n  query GetVisualizationData {\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n': typeof types.GetVisualizationDataDocument;
 };
 const documents: Documents = {
   '\n  query GetFilms($sortBy: FilmSortField, $sortOrder: SortOrder, $filter: FilmFilterInput) {\n    films(sortBy: $sortBy, sortOrder: $sortOrder, filter: $filter, limit: 100) {\n      id\n      title\n      year\n      runtimeMinutes\n      totalRunningDistanceFeet\n      totalRunningTimeSeconds\n      runningInstancesCount\n      runningDensity\n      cpiScore\n      rottenTomatoesScore\n      posterUrl\n      imdbId\n      tmdbId\n      rottenTomatoesUrl\n      wikipediaUrl\n      youtubeTrailerUrl\n      letterboxdUrl\n    }\n  }\n':
@@ -28,12 +26,8 @@ const documents: Documents = {
     types.GetRunningInstancesDocument,
   '\n  query GetFilmStats {\n    filmStats {\n      totalDistanceFeet\n      totalRunningTimeSeconds\n      careerMiles\n    }\n  }\n':
     types.GetFilmStatsDocument,
-  '\n  query GetVisualizationData {\n    yearlyStats {\n      year\n      totalDistanceFeet\n      filmCount\n      films {\n        title\n        totalRunningDistanceFeet\n      }\n    }\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n':
+  '\n  query GetVisualizationData {\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n':
     types.GetVisualizationDataDocument,
-  '\n  query GetTopRunningFilms($limit: Int) {\n    topRunningFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n    }\n  }\n':
-    types.GetTopRunningFilmsDocument,
-  '\n  query GetTopCpiFilms($limit: Int) {\n    topCpiFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n    }\n  }\n':
-    types.GetTopCpiFilmsDocument,
 };
 
 /**
@@ -72,20 +66,8 @@ export function graphql(
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(
-  source: '\n  query GetVisualizationData {\n    yearlyStats {\n      year\n      totalDistanceFeet\n      filmCount\n      films {\n        title\n        totalRunningDistanceFeet\n      }\n    }\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n'
-): (typeof documents)['\n  query GetVisualizationData {\n    yearlyStats {\n      year\n      totalDistanceFeet\n      filmCount\n      films {\n        title\n        totalRunningDistanceFeet\n      }\n    }\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n'];
-/**
- * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
- */
-export function graphql(
-  source: '\n  query GetTopRunningFilms($limit: Int) {\n    topRunningFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n    }\n  }\n'
-): (typeof documents)['\n  query GetTopRunningFilms($limit: Int) {\n    topRunningFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n    }\n  }\n'];
-/**
- * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
- */
-export function graphql(
-  source: '\n  query GetTopCpiFilms($limit: Int) {\n    topCpiFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n    }\n  }\n'
-): (typeof documents)['\n  query GetTopCpiFilms($limit: Int) {\n    topCpiFilms(limit: $limit) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n    }\n  }\n'];
+  source: '\n  query GetVisualizationData {\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n'
+): (typeof documents)['\n  query GetVisualizationData {\n    films(limit: 100) {\n      id\n      title\n      year\n      totalRunningDistanceFeet\n      rottenTomatoesScore\n      cpiScore\n      runningDensity\n      runtimeMinutes\n    }\n  }\n'];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

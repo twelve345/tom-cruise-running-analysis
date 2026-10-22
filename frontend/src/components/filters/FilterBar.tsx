@@ -1,5 +1,5 @@
 import React from 'react';
-import { type FilterState, CATEGORIES } from '../../types/filters';
+import { type FilterState, CATEGORIES, FILM_YEAR_MIN, FILM_YEAR_MAX } from '../../types/filters';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -8,7 +8,7 @@ interface FilterBarProps {
 }
 
 const YEAR_PRESETS: { label: string; value: [number, number] }[] = [
-  { label: 'All Time', value: [1981, 2025] },
+  { label: 'All Time', value: [FILM_YEAR_MIN, FILM_YEAR_MAX] },
   { label: '1980s', value: [1980, 1989] },
   { label: '1990s', value: [1990, 1999] },
   { label: '2000s', value: [2000, 2009] },
@@ -137,8 +137,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     value={filters.yearRange[0]}
                     onChange={(e) => handleYearInputChange(0, e.target.value)}
                     className="w-20 bg-slate-800 text-slate-200 border border-slate-700 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                    min={1981}
-                    max={2025}
+                    min={FILM_YEAR_MIN}
+                    max={FILM_YEAR_MAX}
                   />
                   <span className="text-slate-500">-</span>
                   <input
@@ -146,8 +146,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     value={filters.yearRange[1]}
                     onChange={(e) => handleYearInputChange(1, e.target.value)}
                     className="w-20 bg-slate-800 text-slate-200 border border-slate-700 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                    min={1981}
-                    max={2025}
+                    min={FILM_YEAR_MIN}
+                    max={FILM_YEAR_MAX}
                   />
                 </div>
               )}

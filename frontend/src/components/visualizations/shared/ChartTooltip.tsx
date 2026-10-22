@@ -1,18 +1,28 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { TooltipWithBounds, defaultStyles } from '@visx/tooltip';
+import type { UseTooltipInPortal } from '@visx/tooltip';
 import { colors } from './chartTheme';
 
 interface ChartTooltipProps {
+  /** The `containerBounds` from this chart's useChartTooltip(). */
+  containerBounds: Pick<UseTooltipInPortal['containerBounds'], 'left' | 'top'>;
+  /** Position in the chart svg's own coordinates. */
   left: number;
   top: number;
   children: React.ReactNode;
 }
 
-export const ChartTooltip: React.FC<ChartTooltipProps> = ({ left, top, children }) => {
-  return (
+export const ChartTooltip: React.FC<ChartTooltipProps> = ({
+  containerBounds,
+  left,
+  top,
+  children,
+}) => {
+  return createPortal(
     <TooltipWithBounds
-      top={top}
-      left={left}
+      top={top + containerBounds.top + window.scrollY}
+      left={left + containerBounds.left + window.scrollX}
       style={{
         ...defaultStyles,
         backgroundColor: colors.slate[800],
@@ -28,6 +38,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({ left, top, children 
       }}
     >
       {children}
-    </TooltipWithBounds>
+    </TooltipWithBounds>,
+    document.body
   );
 };

@@ -1,15 +1,17 @@
 import React, { useMemo } from 'react';
 import { Group } from '@visx/group';
 import { scaleBand, scaleLinear } from '@visx/scale';
-import { useTooltip } from '@visx/tooltip';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { AnimatedBar } from '../shared/AnimatedBar';
 import { ChartTooltip } from '../shared/ChartTooltip';
+import { useChartTooltip } from '../shared/useChartTooltip';
+import { innerSize, domainMax } from '../shared/chartLayout';
 import { getCategoryColor } from '../shared/chartTheme';
 import { getCategory } from '../../../utils/distanceCategories';
 
 interface FilmData {
+  id: string;
   title: string;
   year: number;
   totalRunningDistanceFeet: number;
@@ -20,8 +22,16 @@ interface RunningOverTimeChartProps {
 }
 
 export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data }) => {
-  const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
-    useTooltip<FilmData>();
+  const {
+    containerRef,
+    containerBounds,
+    tooltipOpen,
+    tooltipLeft,
+    tooltipTop,
+    tooltipData,
+    hideTooltip,
+    showTooltipAt,
+  } = useChartTooltip<FilmData>();
 
   // Sort by year
   const sortedData = useMemo(() => {
@@ -35,39 +45,40 @@ export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data
       </div>
     );
 
-  // Accessors
-  const getLabel = (d: FilmData) => `${d.year} - ${d.title}`;
+  // Accessors. Bars are keyed by id; the axis shows "year - title".
+  const getId = (d: FilmData) => d.id;
+  const labelById = new Map(sortedData.map((d) => [d.id, `${d.year} - ${d.title}`]));
   const getDistance = (d: FilmData) => d.totalRunningDistanceFeet;
 
   return (
     <ChartWrapper height={400}>
       {({ width, height }) => {
         const margin = { top: 20, right: 30, bottom: 100, left: 60 };
-        const xMax = width - margin.left - margin.right;
-        const yMax = height - margin.top - margin.bottom;
+        const { xMax, yMax } = innerSize(width, height, margin);
 
         const xScale = scaleBand<string>({
           range: [0, xMax],
-          domain: sortedData.map(getLabel),
+          domain: sortedData.map(getId),
           padding: 0.2,
         });
 
         const yScale = scaleLinear<number>({
           range: [yMax, 0],
-          domain: [0, Math.max(...sortedData.map(getDistance))],
+          domain: [0, domainMax(sortedData.map(getDistance))],
           nice: true,
         });
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={containerRef} width={width} height={height}>
               <Group top={margin.top} left={margin.left}>
                 <DarkAxisBottom
                   top={yMax}
                   scale={xScale}
                   tickFormat={(v) => {
                     // Truncate long labels
-                    return v.length > 15 ? `${v.substring(0, 15)}...` : v;
+                    const label = labelById.get(v) ?? v;
+                    return label.length > 15 ? `${label.substring(0, 15)}...` : label;
                   }}
                   // Rotate labels for better fit
                   // Note: DarkAxisBottom doesn't expose tickLabelProps directly for rotation easily
@@ -81,15 +92,15 @@ export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data
                 <DarkAxisLeft scale={yScale} label="Distance (feet)" tickFormat={(v) => `${v}`} />
 
                 {sortedData.map((d, i) => {
-                  const label = getLabel(d);
+                  const id = getId(d);
                   const barWidth = xScale.bandwidth();
                   const barHeight = yMax - (yScale(getDistance(d)) ?? 0);
-                  const barX = xScale(label);
+                  const barX = xScale(id);
                   const barY = yMax - barHeight;
 
                   return (
                     <AnimatedBar
-                      key={`bar-${label}`}
+                      key={`bar-${id}`}
                       x={barX ?? 0}
                       y={barY}
                       width={barWidth}
@@ -97,13 +108,7 @@ export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data
                       fill={getCategoryColor(getCategory(d.totalRunningDistanceFeet))}
                       delay={i * 30}
                       onMouseLeave={() => hideTooltip()}
-                      onMouseEnter={(event) => {
-                        showTooltip({
-                          tooltipData: d,
-                          tooltipLeft: event.clientX,
-                          tooltipTop: event.clientY,
-                        });
-                      }}
+                      onMouseEnter={(event) => showTooltipAt(event, d)}
                     />
                   );
                 })}
@@ -111,7 +116,11 @@ export const RunningOverTimeChart: React.FC<RunningOverTimeChartProps> = ({ data
             </svg>
 
             {tooltipOpen && tooltipData && (
-              <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>
+              <ChartTooltip
+                containerBounds={containerBounds}
+                left={tooltipLeft ?? 0}
+                top={tooltipTop ?? 0}
+              >
                 <div className="font-bold text-amber-400">
                   {tooltipData.title} ({tooltipData.year})
                 </div>

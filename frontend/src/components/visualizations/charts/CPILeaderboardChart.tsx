@@ -3,13 +3,15 @@ import { Group } from '@visx/group';
 import { scaleBand, scaleLinear } from '@visx/scale';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { ChartTooltip } from '../shared/ChartTooltip';
+import { useChartTooltip } from '../shared/useChartTooltip';
+import { innerSize, domainMax } from '../shared/chartLayout';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { AnimatedBar } from '../shared/AnimatedBar';
-import { useTooltip } from '@visx/tooltip';
 import { getCategoryColor } from '../shared/chartTheme';
 import { getCategory } from '../../../utils/distanceCategories';
 
 interface FilmData {
+  id: string;
   title: string;
   year: number;
   cpiScore?: number;
@@ -22,8 +24,16 @@ interface CPILeaderboardChartProps {
 }
 
 export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }) => {
-  const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
-    useTooltip<FilmData>();
+  const {
+    containerRef,
+    containerBounds,
+    tooltipOpen,
+    tooltipLeft,
+    tooltipTop,
+    tooltipData,
+    hideTooltip,
+    showTooltipAt,
+  } = useChartTooltip<FilmData>();
 
   // Sort by CPI descending and take top 10
   const sortedData = useMemo(() => {
@@ -36,35 +46,35 @@ export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }
   if (!sortedData || sortedData.length === 0) return null;
 
   // Accessors
-  const getTitle = (d: FilmData) => d.title;
+  const getId = (d: FilmData) => d.id;
+  const titleById = new Map(sortedData.map((d) => [d.id, d.title]));
   const getCPI = (d: FilmData) => d.cpiScore ?? 0;
 
   return (
     <ChartWrapper height={500}>
       {({ width, height }) => {
         const margin = { top: 20, right: 30, bottom: 50, left: 180 };
-        const xMax = width - margin.left - margin.right;
-        const yMax = height - margin.top - margin.bottom;
+        const { xMax, yMax } = innerSize(width, height, margin);
 
         const yScale = scaleBand<string>({
           range: [0, yMax],
-          domain: sortedData.map(getTitle),
+          domain: sortedData.map(getId),
           padding: 0.2,
         });
 
         const xScale = scaleLinear<number>({
           range: [0, xMax],
-          domain: [0, Math.max(...sortedData.map(getCPI))],
+          domain: [0, domainMax(sortedData.map(getCPI))],
         });
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={containerRef} width={width} height={height}>
               <Group top={margin.top} left={margin.left}>
                 <DarkAxisLeft
                   scale={yScale}
                   tickFormat={(v) => {
-                    const title = v as string;
+                    const title = titleById.get(v as string) ?? (v as string);
                     return title.length > 25 ? `${title.substring(0, 25)}...` : title;
                   }}
                 />
@@ -77,15 +87,15 @@ export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }
                 />
 
                 {sortedData.map((d, i) => {
-                  const title = getTitle(d);
+                  const id = getId(d);
                   const barWidth = xScale(getCPI(d));
                   const barHeight = yScale.bandwidth();
                   const barX = 0;
-                  const barY = yScale(title);
+                  const barY = yScale(id);
 
                   return (
                     <AnimatedBar
-                      key={`bar-${title}`}
+                      key={`bar-${id}`}
                       x={barX}
                       y={barY ?? 0}
                       width={barWidth}
@@ -94,13 +104,7 @@ export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }
                       delay={i * 50}
                       isHorizontal={true}
                       onMouseLeave={() => hideTooltip()}
-                      onMouseEnter={(event) => {
-                        showTooltip({
-                          tooltipData: d,
-                          tooltipLeft: event.clientX,
-                          tooltipTop: event.clientY,
-                        });
-                      }}
+                      onMouseEnter={(event) => showTooltipAt(event, d)}
                     />
                   );
                 })}
@@ -108,7 +112,11 @@ export const CPILeaderboardChart: React.FC<CPILeaderboardChartProps> = ({ data }
             </svg>
 
             {tooltipOpen && tooltipData && (
-              <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>
+              <ChartTooltip
+                containerBounds={containerBounds}
+                left={tooltipLeft ?? 0}
+                top={tooltipTop ?? 0}
+              >
                 <div className="font-bold text-amber-400">
                   {tooltipData.title} ({tooltipData.year})
                 </div>

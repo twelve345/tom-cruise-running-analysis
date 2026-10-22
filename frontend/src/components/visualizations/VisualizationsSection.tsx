@@ -22,15 +22,6 @@ import { CumulativeDistanceChart } from './charts/CumulativeDistanceChart';
 // Colocated GraphQL queries
 const GetVisualizationDataDocument = graphql(`
   query GetVisualizationData {
-    yearlyStats {
-      year
-      totalDistanceFeet
-      filmCount
-      films {
-        title
-        totalRunningDistanceFeet
-      }
-    }
     films(limit: 100) {
       id
       title
@@ -74,6 +65,11 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
     return null;
   }
 
+  // Filter matrix (visx migration plan): the category comparison (chart 2), the category
+  // breakdown (chart 5) and the franchise chart (chart 11) always show every film; the
+  // other charts follow the filter bar.
+  const allFilms = vizData.films;
+
   // ========== CHART 5: Film Category Distribution (Visx) ==========
   const categoryCounts = {
     'No Run': 0,
@@ -82,7 +78,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
     'Full Tom': 0,
   };
 
-  filteredFilms.forEach((movie) => {
+  allFilms.forEach((movie) => {
     const category = getCategory(movie.totalRunningDistanceFeet);
     if (category === 'none') categoryCounts['No Run']++;
     else if (category === 'sprint') categoryCounts['Short Sprint']++;
@@ -107,7 +103,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
     .slice(0, 15);
 
   // ========== CHART 11: Mission: Impossible Franchise Focus ==========
-  const missionFilms = [...filteredFilms]
+  const missionFilms = [...allFilms]
     .filter((f) => f.title.toLowerCase().includes('mission: impossible'))
     .sort((a, b) => a.year - b.year);
 
@@ -137,7 +133,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           1,000 feet have significantly higher average Tomatometer scores.
         </p>
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
-          <RunVsRatingsChart data={filteredFilms} />
+          <RunVsRatingsChart data={allFilms} />
         </div>
       </div>
 
@@ -186,7 +182,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
           Filmography Breakdown by Running Category
         </h2>
         <p className="text-center text-slate-400 mb-6">
-          Distribution of Tom's {vizData.films.length} films across running categories.
+          Distribution of Tom's {allFilms.length} films across running categories.
         </p>
         <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
           <FilmographyBreakdownChart data={filmographyBreakdownData} />
@@ -275,7 +271,7 @@ export const VisualizationsSection: React.FC<VisualizationsSectionProps> = ({
             quality have progressed across {missionFilms.length} films.
           </p>
           <div className="bg-slate-800 p-4 rounded-lg shadow-lg">
-            <MissionImpossibleChart data={filteredFilms} />
+            <MissionImpossibleChart data={missionFilms} />
           </div>
         </div>
       )}

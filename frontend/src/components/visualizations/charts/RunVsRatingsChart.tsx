@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { Group } from '@visx/group';
 import { scaleBand, scaleLinear } from '@visx/scale';
-import { useTooltip } from '@visx/tooltip';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { AnimatedBar } from '../shared/AnimatedBar';
 import { ChartTooltip } from '../shared/ChartTooltip';
+import { useChartTooltip } from '../shared/useChartTooltip';
+import { innerSize } from '../shared/chartLayout';
 import { getCategory } from '../../../utils/distanceCategories';
 import { getCategoryColor } from '../shared/chartTheme';
 
@@ -21,8 +22,16 @@ interface RunVsRatingsChartProps {
 }
 
 export const RunVsRatingsChart: React.FC<RunVsRatingsChartProps> = ({ data }) => {
-  const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
-    useTooltip<{ category: string; averageScore: number; count: number }>();
+  const {
+    containerRef,
+    containerBounds,
+    tooltipOpen,
+    tooltipLeft,
+    tooltipTop,
+    tooltipData,
+    hideTooltip,
+    showTooltipAt,
+  } = useChartTooltip<{ category: string; averageScore: number; count: number }>();
 
   // Aggregate data by category
   const aggregatedData = useMemo(() => {
@@ -65,8 +74,7 @@ export const RunVsRatingsChart: React.FC<RunVsRatingsChartProps> = ({ data }) =>
     <ChartWrapper height={450}>
       {({ width, height }) => {
         const margin = { top: 20, right: 30, bottom: 50, left: 180 };
-        const xMax = width - margin.left - margin.right;
-        const yMax = height - margin.top - margin.bottom;
+        const { xMax, yMax } = innerSize(width, height, margin);
 
         const yScale = scaleBand<string>({
           range: [0, yMax],
@@ -81,7 +89,7 @@ export const RunVsRatingsChart: React.FC<RunVsRatingsChartProps> = ({ data }) =>
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={containerRef} width={width} height={height}>
               <Group top={margin.top} left={margin.left}>
                 <DarkAxisLeft scale={yScale} tickFormat={(v) => v as string} />
                 <DarkAxisBottom
@@ -108,13 +116,7 @@ export const RunVsRatingsChart: React.FC<RunVsRatingsChartProps> = ({ data }) =>
                       fill={getCategoryColor(d.category)}
                       delay={i * 100}
                       onMouseLeave={() => hideTooltip()}
-                      onMouseEnter={(event) => {
-                        showTooltip({
-                          tooltipData: d,
-                          tooltipLeft: event.clientX,
-                          tooltipTop: event.clientY,
-                        });
-                      }}
+                      onMouseEnter={(event) => showTooltipAt(event, d)}
                     />
                   );
                 })}
@@ -122,7 +124,11 @@ export const RunVsRatingsChart: React.FC<RunVsRatingsChartProps> = ({ data }) =>
             </svg>
 
             {tooltipOpen && tooltipData && (
-              <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>
+              <ChartTooltip
+                containerBounds={containerBounds}
+                left={tooltipLeft ?? 0}
+                top={tooltipTop ?? 0}
+              >
                 <div className="font-bold text-slate-200">{tooltipData.category}</div>
                 <div className="text-slate-300">
                   Avg Score:{' '}

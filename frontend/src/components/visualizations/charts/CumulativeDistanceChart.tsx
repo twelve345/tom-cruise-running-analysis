@@ -3,11 +3,12 @@ import { Group } from '@visx/group';
 import { LinePath, AreaClosed, Bar, Line } from '@visx/shape';
 import { GlyphCircle } from '@visx/glyph';
 import { scaleLinear } from '@visx/scale';
-import { useTooltip } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { ChartTooltip } from '../shared/ChartTooltip';
+import { useChartTooltip } from '../shared/useChartTooltip';
+import { innerSize, domainMax } from '../shared/chartLayout';
 import { colors } from '../shared/chartTheme';
 import { curveMonotoneX } from '@visx/curve';
 import { LinearGradient } from '@visx/gradient';
@@ -24,8 +25,16 @@ interface CumulativeDistanceChartProps {
 }
 
 export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = ({ data }) => {
-  const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
-    useTooltip<{ year: number; distance: number; title: string }>();
+  const {
+    containerRef,
+    containerBounds,
+    tooltipOpen,
+    tooltipLeft,
+    tooltipTop,
+    tooltipData,
+    hideTooltip,
+    showTooltip,
+  } = useChartTooltip<{ year: number; distance: number; title: string }>();
 
   // Calculate cumulative distance
   const cumulativeData = useMemo(() => {
@@ -52,8 +61,7 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
     <ChartWrapper height={450}>
       {({ width, height }) => {
         const margin = { top: 20, right: 30, bottom: 50, left: 60 };
-        const xMax = width - margin.left - margin.right;
-        const yMax = height - margin.top - margin.bottom;
+        const { xMax, yMax } = innerSize(width, height, margin);
 
         // Scales
         const xScale = scaleLinear<number>({
@@ -67,7 +75,7 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
 
         const yScale = scaleLinear<number>({
           range: [yMax, 0],
-          domain: [0, Math.max(...cumulativeData.map(getDistance))],
+          domain: [0, domainMax(cumulativeData.map(getDistance))],
           nice: true,
         });
 
@@ -92,7 +100,7 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={containerRef} width={width} height={height}>
               <LinearGradient
                 id="area-gradient"
                 from={colors.amber[500]}
@@ -192,7 +200,11 @@ export const CumulativeDistanceChart: React.FC<CumulativeDistanceChartProps> = (
             </svg>
 
             {tooltipOpen && tooltipData && (
-              <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>
+              <ChartTooltip
+                containerBounds={containerBounds}
+                left={tooltipLeft ?? 0}
+                top={tooltipTop ?? 0}
+              >
                 <div className="font-bold text-slate-200">
                   {tooltipData.year} - {tooltipData.title}
                 </div>

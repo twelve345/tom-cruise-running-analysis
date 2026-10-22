@@ -2,11 +2,12 @@ import React, { useMemo } from 'react';
 import { Group } from '@visx/group';
 import { GlyphCircle } from '@visx/glyph';
 import { scaleLinear } from '@visx/scale';
-import { useTooltip } from '@visx/tooltip';
 import { Line } from '@visx/shape';
 import { ChartWrapper } from '../shared/ChartWrapper';
 import { DarkAxisBottom, DarkAxisLeft } from '../shared/DarkThemeAxis';
 import { ChartTooltip } from '../shared/ChartTooltip';
+import { useChartTooltip } from '../shared/useChartTooltip';
+import { innerSize } from '../shared/chartLayout';
 import { colors } from '../shared/chartTheme';
 
 interface FilmData {
@@ -22,8 +23,16 @@ interface CPIPerformanceMapProps {
 }
 
 export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) => {
-  const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } =
-    useTooltip<FilmData>();
+  const {
+    containerRef,
+    containerBounds,
+    tooltipOpen,
+    tooltipLeft,
+    tooltipTop,
+    tooltipData,
+    hideTooltip,
+    showTooltip,
+  } = useChartTooltip<FilmData>();
 
   // Filter data
   const scatterData = useMemo(() => {
@@ -41,8 +50,7 @@ export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) =>
     <ChartWrapper height={500}>
       {({ width, height }) => {
         const margin = { top: 20, right: 30, bottom: 50, left: 60 };
-        const xMax = width - margin.left - margin.right;
-        const yMax = height - margin.top - margin.bottom;
+        const { xMax, yMax } = innerSize(width, height, margin);
 
         // Scales
         const xScale = scaleLinear<number>({
@@ -80,7 +88,7 @@ export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) =>
 
         return (
           <>
-            <svg width={width} height={height}>
+            <svg ref={containerRef} width={width} height={height}>
               <Group top={margin.top} left={margin.left}>
                 <DarkAxisBottom
                   top={yMax}
@@ -168,7 +176,11 @@ export const CPIPerformanceMap: React.FC<CPIPerformanceMapProps> = ({ data }) =>
             </svg>
 
             {tooltipOpen && tooltipData && (
-              <ChartTooltip left={tooltipLeft ?? 0} top={tooltipTop ?? 0}>
+              <ChartTooltip
+                containerBounds={containerBounds}
+                left={tooltipLeft ?? 0}
+                top={tooltipTop ?? 0}
+              >
                 <div className="font-bold text-slate-200">
                   {tooltipData.title} ({tooltipData.year})
                 </div>
