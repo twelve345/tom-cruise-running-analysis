@@ -1,0 +1,16 @@
+# Both images build with the repository root as context (one root package-lock.json for
+# the npm workspaces), so this file applies to frontend/Dockerfile and backend/Dockerfile.
+.git
+.github
+.claude
+.husky
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+**/.eslintcache
+**/*.tsbuildinfo
+docker-compose*.yml

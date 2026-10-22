@@ -40,7 +40,8 @@ npm run db:seed
 ```
 
 The seed upserts and never deletes, so it is safe to re-run; production runs it on every boot
-(`npm run start:railway`).
+(`scripts/start-railway.js`, the production image's entrypoint; `npm run start:railway` runs the
+same script locally).
 
 ### Running the Server
 

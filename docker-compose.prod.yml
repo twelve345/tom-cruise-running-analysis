@@ -1,10 +1,12 @@
 # docker-compose.prod.yml
 # Note: This file requires a .env file. Please copy .env.example to .env and adjust values if needed.
+# Both images build from the repository root (one root package-lock.json for the npm workspaces).
 services:
   # Backend Node.js Service
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
       target: production
     container_name: tomcruise_backend_prod
     restart: always
@@ -20,15 +22,19 @@ services:
       - internal_net
       - default
 
-  # Frontend React Service (Nginx)
+  # Frontend React Service (unprivileged nginx on :8080)
   frontend:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       target: production
+      args:
+        # Required: the production build refuses to fall back to localhost.
+        VITE_API_URL: ${VITE_API_URL}
     container_name: tomcruise_frontend_prod
     restart: always
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
       - backend
     networks:

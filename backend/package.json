@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "start:railway": "(node scripts/seedMongo.js || echo 'WARNING: MongoDB sync failed; starting with existing data') && node index.js",
+    "start:railway": "node scripts/start-railway.js",
     "dev": "nodemon index.js",
     "db:seed": "node scripts/seedMongo.js",
     "schema:export": "node scripts/exportSchema.js",

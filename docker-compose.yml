@@ -1,17 +1,19 @@
 # docker-compose.yml
 # Note: This file requires a .env file. Please copy .env.example to .env and adjust values if needed.
+# Both images build from the repository root (one root package-lock.json for the npm workspaces).
 services:
   # Backend Node.js Service
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
       target: development
     container_name: tomcruise_backend
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend:/app/backend
+      - /app/backend/node_modules
     depends_on:
       - mongo
     environment:
@@ -22,14 +24,15 @@ services:
   # Frontend React Service
   frontend:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       target: development
     container_name: tomcruise_frontend
     ports:
       - "3000:5173"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
     environment:
       - VITE_API_URL=${VITE_API_URL}
 
