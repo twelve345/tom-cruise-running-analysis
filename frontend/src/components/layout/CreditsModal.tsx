@@ -262,7 +262,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                   <li>• React 19</li>
                   <li>• TypeScript</li>
                   <li>• Tailwind CSS</li>
-                  <li>• Chart.js</li>
+                  <li>• Visx</li>
                   <li>• Apollo Client</li>
                 </ul>
               </div>

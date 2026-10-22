@@ -1,5 +1,3 @@
-import { buildChartTheme } from '@visx/xychart';
-
 export const colors = {
   slate: {
     50: '#f8fafc',
@@ -54,14 +52,6 @@ export const colors = {
     950: '#2e1065',
   },
 };
-
-export const chartTheme = buildChartTheme({
-  backgroundColor: colors.slate[900],
-  colors: [colors.amber[500], colors.amber[400], colors.amber[300]],
-  gridColor: colors.slate[700],
-  gridColorDark: colors.slate[800],
-  tickLength: 4,
-});
 
 export const axisStyles = {
   bottom: {
