@@ -18,7 +18,7 @@ COPY backend/package.json ./backend/package.json
 COPY frontend/package.json ./frontend/package.json
 
 # --------------------------------------------------------------------------- development
-# Used by docker-compose.yml (nodemon). Installs devDependencies too.
+# Used by docker-compose.yml (`node --watch`). Installs devDependencies too.
 # --ignore-scripts: no install-time lifecycle scripts run (a supply-chain worm vector).
 FROM base AS development
 RUN npm ci --ignore-scripts --workspace=backend
