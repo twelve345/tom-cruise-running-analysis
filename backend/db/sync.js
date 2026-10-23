@@ -12,8 +12,8 @@
  * the next one.
  *
  * Films and metadata are refreshed from source. Running instances are inserted when
- * missing and only their film link (filmId/filmTitle/filmYear/sequenceNumber) is
- * refreshed, so edits made through updateRunningInstance survive a deploy.
+ * missing; after that, only their film link (filmId/filmTitle/filmYear/sequenceNumber)
+ * is refreshed.
  */
 
 const { deriveFilmStats } = require('./filmStats');

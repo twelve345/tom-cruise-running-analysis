@@ -9,7 +9,7 @@
 
 const { getMongoDB } = require('../db/mongodb');
 const { ObjectId } = require('mongodb');
-const { deriveFilmStats, round } = require('../db/filmStats');
+const { round } = require('../db/filmStats');
 
 const SORT_FIELDS = {
   year: 'year',
@@ -19,12 +19,6 @@ const SORT_FIELDS = {
   cpiScore: 'cpiScore',
   rottenTomatoesScore: 'rottenTomatoesScore',
 };
-
-const MANUAL_SOURCE = { provider: 'Manual entry' };
-
-// Manually created running instances get ranks from here up, clear of the source ranking
-// (1-300) that db/sync.js upserts by rank on every deploy.
-const MANUAL_RANK_START = 10000;
 
 const resolvers = {
   // ============================================================================
@@ -233,176 +227,6 @@ const resolvers = {
     const byId = new Map(docs.map((doc) => [doc.id, doc]));
 
     return filmIds.filter((id) => byId.has(id)).map((id) => mapFilm(byId.get(id)));
-  },
-
-  // ============================================================================
-  // MUTATION RESOLVERS
-  // ============================================================================
-
-  // Film Mutations
-  createFilm: async ({ title, year, runtimeMinutes, rottenTomatoesScore, posterUrl, imdbId }) => {
-    const films = getMongoDB().collection('films');
-    const [last] = await films
-      .find({}, { projection: { id: 1 } })
-      .sort({ id: -1 })
-      .limit(1)
-      .toArray();
-    const now = new Date();
-
-    const fields = {
-      title,
-      year,
-      runtimeMinutes: runtimeMinutes ?? null,
-      rottenTomatoesScore: rottenTomatoesScore ?? null,
-      totalRunningDistanceFeet: 0,
-      posterUrl: posterUrl ?? null,
-      imdbId: imdbId ?? null,
-    };
-    const doc = {
-      id: (last?.id || 0) + 1,
-      ...fields,
-      ...deriveFilmStats(fields),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await films.insertOne(doc);
-    return mapFilm(doc);
-  },
-
-  updateFilm: async ({
-    id,
-    title,
-    year,
-    runtimeMinutes,
-    rottenTomatoesScore,
-    posterUrl,
-    imdbId,
-  }) => {
-    const existing = await findFilm(id);
-    if (!existing) throw new Error(`Film ${id} not found`);
-
-    const updates = {};
-    if (title !== undefined) updates.title = title;
-    if (year !== undefined) updates.year = year;
-    if (runtimeMinutes !== undefined) updates.runtimeMinutes = runtimeMinutes;
-    if (rottenTomatoesScore !== undefined) updates.rottenTomatoesScore = rottenTomatoesScore;
-    if (posterUrl !== undefined) updates.posterUrl = posterUrl;
-    if (imdbId !== undefined) updates.imdbId = imdbId;
-
-    const doc = await getMongoDB()
-      .collection('films')
-      .findOneAndUpdate(
-        { id: existing.id },
-        {
-          $set: {
-            ...updates,
-            ...deriveFilmStats({ ...existing, ...updates }),
-            updatedAt: new Date(),
-          },
-        },
-        { returnDocument: 'after' }
-      );
-    return mapFilm(doc);
-  },
-
-  deleteFilm: async ({ id }) => {
-    const filmId = toFilmId(id);
-    if (filmId === null) return false;
-
-    const db = getMongoDB();
-    const result = await db.collection('films').deleteOne({ id: filmId });
-    await db.collection('runninginstances').deleteMany({ filmId });
-    await db.collection('filmmetadata').deleteMany({ filmId });
-    return result.deletedCount > 0;
-  },
-
-  // Running Instance Mutations
-  createRunningInstance: async ({
-    filmId,
-    sequenceNumber,
-    distanceFeet,
-    durationSeconds,
-    timestampStart,
-    context,
-    intensity,
-    location,
-  }) => {
-    const db = getMongoDB();
-    const film = await db.collection('films').findOne({ id: filmId });
-    if (!film) throw new Error(`Film ${filmId} not found`);
-
-    const instances = db.collection('runninginstances');
-    const [last] = await instances
-      .find({}, { projection: { rank: 1 } })
-      .sort({ rank: -1 })
-      .limit(1)
-      .toArray();
-    const now = new Date();
-
-    const doc = {
-      filmId,
-      filmTitle: film.title,
-      filmYear: film.year,
-      rank: Math.max((last?.rank || 0) + 1, MANUAL_RANK_START),
-      sequenceNumber,
-      scene: {
-        context: context || '',
-        timestampStart: timestampStart ?? null,
-        timestampEnd: null,
-        intensity: intensity ?? null,
-        // Always an object, like the source data, so updateRunningInstance can set location.setting.
-        location: { setting: location ?? null, city: null, country: null },
-      },
-      measurement: { distanceFeet, durationSeconds, source: 'manual', calculatedAt: now },
-      tags: [],
-      sources: { ranking: MANUAL_SOURCE, description: MANUAL_SOURCE, distance: MANUAL_SOURCE },
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const { insertedId } = await instances.insertOne(doc);
-    return mapMongoRunningInstance({ ...doc, _id: insertedId });
-  },
-
-  updateRunningInstance: async ({
-    id,
-    distanceFeet,
-    durationSeconds,
-    timestampStart,
-    context,
-    intensity,
-    location,
-  }) => {
-    if (!ObjectId.isValid(id)) throw new Error(`Running instance ${id} not found`);
-
-    const updateFields = { updatedAt: new Date() };
-    if (distanceFeet !== undefined) updateFields['measurement.distanceFeet'] = distanceFeet;
-    if (durationSeconds !== undefined)
-      updateFields['measurement.durationSeconds'] = durationSeconds;
-    if (timestampStart !== undefined) updateFields['scene.timestampStart'] = timestampStart;
-    if (context !== undefined) updateFields['scene.context'] = context;
-    if (intensity !== undefined) updateFields['scene.intensity'] = intensity;
-    if (location !== undefined) updateFields['scene.location.setting'] = location;
-
-    // Driver 6 returns the updated document itself (null when nothing matched).
-    const doc = await getMongoDB()
-      .collection('runninginstances')
-      .findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: updateFields },
-        { returnDocument: 'after' }
-      );
-    if (!doc) throw new Error(`Running instance ${id} not found`);
-    return mapMongoRunningInstance(doc);
-  },
-
-  deleteRunningInstance: async ({ id }) => {
-    if (!ObjectId.isValid(id)) return false;
-    const result = await getMongoDB()
-      .collection('runninginstances')
-      .deleteOne({ _id: new ObjectId(id) });
-    return result.deletedCount > 0;
   },
 };
 
