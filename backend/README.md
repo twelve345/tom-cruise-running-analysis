@@ -135,41 +135,12 @@ query {
 }
 ```
 
-### Sample Mutations
+### Changing the data
 
-**Create a new film:**
-
-```graphql
-mutation {
-  createFilm(title: "Top Gun: Maverick", year: 2022, runtimeMinutes: 131, rottenTomatoesScore: 96) {
-    id
-    title
-    cpiScore
-  }
-}
-```
-
-**Add a running instance:**
-
-```graphql
-mutation {
-  createRunningInstance(
-    filmId: 1
-    sequenceNumber: 1
-    distanceFeet: 1200
-    durationSeconds: 45.5
-    context: "Chasing antagonist through streets"
-    intensity: "sprint"
-    location: "outdoor"
-  ) {
-    id
-    rank
-    measurement {
-      distanceFeet
-    }
-  }
-}
-```
+The API is read-only. The data lives in committed JSON under `scripts/`:
+`enrichedMovieData.json` (films), `extracted295instances.json` (running scenes) and
+`filmMetadata.json` (trivia and analysis). Edit those files and the seed applies them:
+`npm run db:seed` locally, and automatically on every production boot.
 
 ## Project Structure
 
