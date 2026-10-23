@@ -24,6 +24,7 @@ require('dotenv').config();
 const express = require('express');
 const { createHandler } = require('graphql-http/lib/use/express');
 const cors = require('cors');
+const { corsOptions } = require('./cors');
 const schema = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
 const { connectMongo, getMongoDB, closeMongo } = require('./db/mongodb');
@@ -32,14 +33,6 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
-const _allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:4173',
-  'https://tomcruiserunningtime.com',
-  'https://www.tomcruiserunningtime.com',
-  'https://tomcruise-frontend-production.up.railway.app',
-];
-
 // Global Request Logger - Debugging Production Issues
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -47,19 +40,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // NUCLEAR OPTION: Allow ALL origins to rule out logic errors.
-    // We will restrict this back to 'allowedOrigins' once we confirm it works.
-    console.log('✅ CORS Allowed (Debug Mode). Origin:', origin);
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  // allowedHeaders: ['Content-Type', 'Authorization'] // Removed to allow all headers
-};
-
-// Enable CORS for all routes
+// CORS: only the site's own origins may read responses in a browser (see cors.js).
 app.use(cors(corsOptions));
 
 // Explicitly handle OPTIONS preflight requests for all routes

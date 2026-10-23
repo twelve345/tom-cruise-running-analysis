@@ -273,54 +273,6 @@ const schema = buildSchema(`
     filmWithScenes(id: ID!): FilmWithScenes
     topFilmsByIntensity(intensity: String!, limit: Int): [Film!]!
   }
-
-  type Mutation {
-    # Film mutations
-    createFilm(
-      title: String!
-      year: Int!
-      runtimeMinutes: Int
-      rottenTomatoesScore: Int
-      posterUrl: String
-      imdbId: String
-    ): Film!
-
-    updateFilm(
-      id: ID!
-      title: String
-      year: Int
-      runtimeMinutes: Int
-      rottenTomatoesScore: Int
-      posterUrl: String
-      imdbId: String
-    ): Film!
-
-    deleteFilm(id: ID!): Boolean!
-
-    # Running instance mutations
-    createRunningInstance(
-      filmId: Int!
-      sequenceNumber: Int!
-      distanceFeet: Int!
-      durationSeconds: Float!
-      timestampStart: String
-      context: String
-      intensity: String
-      location: String
-    ): RunningInstance!
-
-    updateRunningInstance(
-      id: ID!
-      distanceFeet: Int
-      durationSeconds: Float
-      timestampStart: String
-      context: String
-      intensity: String
-      location: String
-    ): RunningInstance!
-
-    deleteRunningInstance(id: ID!): Boolean!
-  }
 `);
 
 module.exports = schema;
