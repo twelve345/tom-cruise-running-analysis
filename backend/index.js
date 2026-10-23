@@ -69,7 +69,7 @@ app.use(express.json());
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
-  let mongoStatus = 'unknown';
+  let mongoStatus;
 
   try {
     await getMongoDB().command({ ping: 1 });

@@ -3,6 +3,9 @@ import { useQuery, useLazyQuery } from '@apollo/client/react';
 import { graphql } from '../../gql';
 import type { FilmSortField, SortOrder } from '../../gql/graphql';
 import { getCategory, getCategoryLabel } from '../../utils/distanceCategories';
+import { matchesFilters } from '../../utils/filmFilters';
+import { getCategoryColor } from '../visualizations/shared/chartTheme';
+import type { FilterState } from '../../types/filters';
 
 // Colocated GraphQL queries
 const GetFilmsDocument = graphql(`
@@ -72,10 +75,29 @@ const GetRunningInstancesDocument = graphql(`
   }
 `);
 
-export const FilmographyExplorer: React.FC = () => {
+interface FilmographyExplorerProps {
+  filters: FilterState;
+}
+
+// Declared outside FilmographyExplorer so React keeps one component identity across renders.
+const SortIcon = ({
+  field,
+  sortBy,
+  sortOrder,
+}: {
+  field: FilmSortField;
+  sortBy: FilmSortField;
+  sortOrder: SortOrder;
+}) => {
+  if (sortBy !== field) {
+    return <span className="text-slate-600">⇅</span>;
+  }
+  return <span className="text-amber-400">{sortOrder === 'ASC' ? '↑' : '↓'}</span>;
+};
+
+export const FilmographyExplorer: React.FC<FilmographyExplorerProps> = ({ filters }) => {
   const [sortBy, setSortBy] = useState<FilmSortField>('year');
   const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const { loading, error, data } = useQuery(GetFilmsDocument, {
@@ -107,34 +129,21 @@ export const FilmographyExplorer: React.FC = () => {
     setExpandedRows(newExpanded);
   };
 
-  const filteredFilms =
-    data?.films.filter((film) => {
-      if (filterCategory === 'all') return true;
-      const category = getCategory(film.totalRunningDistanceFeet);
-      return category === filterCategory;
-    }) || [];
+  const filteredFilms = data?.films.filter((film) => matchesFilters(film, filters)) ?? [];
 
   const getCategoryBadge = (distance: number) => {
     const category = getCategory(distance);
-    const colors = {
-      none: 'bg-slate-600 text-slate-200',
-      sprint: 'bg-blue-600 text-white',
-      middle: 'bg-yellow-600 text-white',
-      'full-tom': 'bg-amber-600 text-white',
-    };
+    const color = getCategoryColor(category);
     const label = getCategoryLabel(category);
+
     return (
-      <span className={`text-xs px-2 py-1 rounded ${colors[category as keyof typeof colors]}`}>
+      <span
+        className="text-xs px-2 py-1 rounded text-white font-medium shadow-sm"
+        style={{ backgroundColor: color }}
+      >
         {label}
       </span>
     );
-  };
-
-  const SortIcon = ({ field }: { field: FilmSortField }) => {
-    if (sortBy !== field) {
-      return <span className="text-slate-600">⇅</span>;
-    }
-    return <span className="text-amber-400">{sortOrder === 'ASC' ? '↑' : '↓'}</span>;
   };
 
   return (
@@ -144,24 +153,6 @@ export const FilmographyExplorer: React.FC = () => {
         <p className="text-center text-slate-400 mb-6">
           Every Tom Cruise film with running analytics. Click any row to expand for details.
         </p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center justify-center">
-        <label className="text-slate-300">
-          Filter by Category:
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="ml-2 bg-slate-800 text-white border border-slate-700 rounded px-3 py-2"
-          >
-            <option value="all">All Films ({data?.films.length ?? 0})</option>
-            <option value="full-tom">Full Tom (1001+ ft)</option>
-            <option value="middle">Middle-Distance (501-1000 ft)</option>
-            <option value="sprint">Short Sprint (1-500 ft)</option>
-            <option value="none">No Run (0 ft)</option>
-          </select>
-        </label>
       </div>
 
       {/* Table */}
@@ -175,7 +166,7 @@ export const FilmographyExplorer: React.FC = () => {
                     onClick={() => handleSort('year')}
                     className="flex items-center gap-2 hover:text-amber-400 transition-colors"
                   >
-                    TITLE / YEAR <SortIcon field="year" />
+                    TITLE / YEAR <SortIcon field="year" sortBy={sortBy} sortOrder={sortOrder} />
                   </button>
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">
@@ -183,7 +174,8 @@ export const FilmographyExplorer: React.FC = () => {
                     onClick={() => handleSort('runtimeMinutes')}
                     className="flex items-center gap-2 ml-auto hover:text-amber-400 transition-colors"
                   >
-                    RUNTIME <SortIcon field="runtimeMinutes" />
+                    RUNTIME{' '}
+                    <SortIcon field="runtimeMinutes" sortBy={sortBy} sortOrder={sortOrder} />
                   </button>
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -191,7 +183,12 @@ export const FilmographyExplorer: React.FC = () => {
                     onClick={() => handleSort('totalRunningDistanceFeet')}
                     className="flex items-center gap-2 ml-auto hover:text-amber-400 transition-colors"
                   >
-                    DISTANCE <SortIcon field="totalRunningDistanceFeet" />
+                    DISTANCE{' '}
+                    <SortIcon
+                      field="totalRunningDistanceFeet"
+                      sortBy={sortBy}
+                      sortOrder={sortOrder}
+                    />
                   </button>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider hidden lg:table-cell">
@@ -199,7 +196,12 @@ export const FilmographyExplorer: React.FC = () => {
                     onClick={() => handleSort('totalRunningDistanceFeet')}
                     className="flex items-center gap-2 mx-auto hover:text-amber-400 transition-colors"
                   >
-                    CATEGORY <SortIcon field="totalRunningDistanceFeet" />
+                    CATEGORY{' '}
+                    <SortIcon
+                      field="totalRunningDistanceFeet"
+                      sortBy={sortBy}
+                      sortOrder={sortOrder}
+                    />
                   </button>
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider hidden lg:table-cell">
@@ -207,7 +209,8 @@ export const FilmographyExplorer: React.FC = () => {
                     onClick={() => handleSort('runningInstancesCount')}
                     className="flex items-center gap-2 ml-auto hover:text-amber-400 transition-colors"
                   >
-                    INSTANCES <SortIcon field="runningInstancesCount" />
+                    INSTANCES{' '}
+                    <SortIcon field="runningInstancesCount" sortBy={sortBy} sortOrder={sortOrder} />
                   </button>
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -215,7 +218,7 @@ export const FilmographyExplorer: React.FC = () => {
                     onClick={() => handleSort('cpiScore')}
                     className="flex items-center gap-2 ml-auto hover:text-amber-400 transition-colors"
                   >
-                    CPI <SortIcon field="cpiScore" />
+                    CPI <SortIcon field="cpiScore" sortBy={sortBy} sortOrder={sortOrder} />
                   </button>
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -223,7 +226,8 @@ export const FilmographyExplorer: React.FC = () => {
                     onClick={() => handleSort('rottenTomatoesScore')}
                     className="flex items-center gap-2 ml-auto hover:text-amber-400 transition-colors"
                   >
-                    RT <SortIcon field="rottenTomatoesScore" />
+                    RT{' '}
+                    <SortIcon field="rottenTomatoesScore" sortBy={sortBy} sortOrder={sortOrder} />
                   </button>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">

@@ -12,7 +12,7 @@ GraphQL API for the Tom Cruise Running Analysis platform.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 24 LTS (version pinned in the repo-root `.nvmrc`)
 - MongoDB (if running locally)
 
 ### Installation
@@ -40,7 +40,8 @@ npm run db:seed
 ```
 
 The seed upserts and never deletes, so it is safe to re-run; production runs it on every boot
-(`npm run start:railway`).
+(`scripts/start-railway.js`, the production image's entrypoint; `npm run start:railway` runs the
+same script locally).
 
 ### Running the Server
 

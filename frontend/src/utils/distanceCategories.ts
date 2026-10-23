@@ -19,3 +19,10 @@ export const getCategoryLabel = (category: string): string => {
       return 'All Distances';
   }
 };
+
+export const FILTER_CATEGORY_MAP: Record<string, string> = {
+  'Full Tom': 'full-tom',
+  'Middle-Distance': 'middle',
+  'Short Sprint': 'sprint',
+  'No Run': 'none',
+};

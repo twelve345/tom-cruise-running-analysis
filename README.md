@@ -24,8 +24,8 @@ Over a career spanning more than four decades, Tom Cruise has sprinted an estima
 
 This project is built with a modern, scalable architecture designed for a rich, interactive user experience.
 
-- **Frontend**: React, Chart.js, Tailwind CSS
-- **Backend**: Node.js with a GraphQL API
+- **Frontend**: React, Visx, Tailwind CSS
+- **Backend**: Node.js 24 LTS with a GraphQL API
 - **Database**: MongoDB, for films, running scenes and film metadata.
 - **Infrastructure & DevOps**:
   - **Terraform**: For Infrastructure as Code (IaC) to manage cloud resources.

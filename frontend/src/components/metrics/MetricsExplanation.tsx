@@ -11,8 +11,8 @@ export const MetricsExplanation: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column: Formula & Calculation */}
           <div className="space-y-6">
-            <div className="bg-slate-900 p-6 rounded-lg border border-amber-500/30">
-              <h3 className="text-xl font-semibold text-amber-400 mb-4">The Formula</h3>
+            <div className="bg-slate-900 p-6 rounded-lg border border-violet-500/30">
+              <h3 className="text-xl font-semibold text-violet-400 mb-4">The Formula</h3>
               <div className="text-center py-4">
                 <div className="text-2xl font-mono text-white mb-2">
                   CPI = <span className="text-amber-400">(Distance ÷ Runtime)</span> ×{' '}
@@ -52,7 +52,7 @@ export const MetricsExplanation: React.FC = () => {
                 <div className="border-t border-slate-700 pt-3 mt-3">
                   <div className="font-mono text-sm text-slate-400">(3,066 ÷ 120) × (93 ÷ 100)</div>
                   <div className="font-mono text-sm text-slate-400">= 25.55 × 0.93</div>
-                  <div className="text-2xl font-bold text-amber-400 mt-2">= 23.76 CPI</div>
+                  <div className="text-2xl font-bold text-violet-400 mt-2">= 23.76 CPI</div>
                 </div>
               </div>
             </div>
@@ -85,15 +85,15 @@ export const MetricsExplanation: React.FC = () => {
             <div className="bg-slate-900 p-6 rounded-lg border border-slate-700">
               <h3 className="text-xl font-semibold text-white mb-4">What Makes a Good CPI?</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-amber-500/10 rounded border-l-4 border-amber-500">
+                <div className="flex items-center justify-between p-3 bg-violet-500/10 rounded border-l-4 border-violet-500">
                   <span className="font-semibold text-white">Excellent (20+)</span>
                   <span className="text-sm text-slate-400">Peak Tom performances</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-yellow-500/10 rounded border-l-4 border-yellow-500">
+                <div className="flex items-center justify-between p-3 bg-violet-400/10 rounded border-l-4 border-violet-400">
                   <span className="font-semibold text-white">Good (10-20)</span>
                   <span className="text-sm text-slate-400">Solid running + quality</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-blue-500/10 rounded border-l-4 border-blue-500">
+                <div className="flex items-center justify-between p-3 bg-violet-300/10 rounded border-l-4 border-violet-300">
                   <span className="font-semibold text-white">Average (5-10)</span>
                   <span className="text-sm text-slate-400">Decent effort</span>
                 </div>

@@ -21,26 +21,18 @@ npm run lint --workspace=frontend -- --max-warnings=0 || {
 echo "✓ Frontend linting passed"
 echo ""
 
-# TypeScript type check (with incremental caching)
+# TypeScript type check. frontend/tsconfig.json is a solution file ("files": []),
+# so `tsc -b` (build mode, incremental by default) is what checks the projects.
 echo "→ Running TypeScript type check..."
-cd frontend && npx tsc --noEmit --incremental || {
+(cd frontend && npx tsc -b) || {
   echo "❌ TypeScript type check failed!"
   exit 1
 }
-cd ..
 echo "✓ TypeScript type check passed"
 echo ""
 
-# Security audit
-echo "→ Running security audit..."
-npm audit --audit-level=high --workspaces || {
-  echo "❌ Security vulnerabilities detected!"
-  echo "💡 Run 'npm audit fix' to attempt automatic fixes"
-  echo "💡 Or use '--no-verify' to bypass if vulnerabilities are accepted risks"
-  exit 1
-}
-echo "✓ Security audit passed"
-echo ""
+# The dependency audit runs in CI (.github/workflows/dependency-audit.yml) on every
+# push, PR and weekly, so a newly disclosed CVE doesn't block unrelated pushes.
 
 # Run backend tests
 echo "→ Running backend tests..."
