@@ -20,7 +20,7 @@
     "express": "^4.22.3",
     "graphql": "^16.8.1",
     "graphql-http": "^1.23.1",
-    "mongodb": "^6.21.0"
+    "mongodb": "^7.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
