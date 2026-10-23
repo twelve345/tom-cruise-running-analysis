@@ -46,7 +46,7 @@ RUN npm run build --workspace=frontend
 # stage carries exactly these packages and their database (image scanners read it).
 # nginx comes from a version line, so every build takes Wolfi's newest security rebuild.
 # --no-scripts: nothing here needs an install hook; the runtime user is added by hand.
-FROM cgr.dev/chainguard/wolfi-base:latest@sha256:256c88bb066424045021090932d50be93c8e3f2ce3586707702a401b146f3e43 AS rootfs
+FROM cgr.dev/chainguard/wolfi-base:latest@sha256:f15fea2f49cb14dceaea491fcbde0d35e0c190126a744ac05a9838440d47d994 AS rootfs
 RUN apk add --no-cache --no-scripts --root /rootfs --initdb \
       --keys-dir /etc/apk/keys --repositories-file /etc/apk/repositories \
       wolfi-baselayout "nginx-mainline~1.31" \
