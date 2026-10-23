@@ -2,7 +2,7 @@ const { buildSchema } = require('graphql');
 
 const schema = buildSchema(`
   # ============================================================================
-  # PostgreSQL Types (Core relational data)
+  # Film Types (films collection)
   # ============================================================================
 
   type Film {
@@ -31,7 +31,7 @@ const schema = buildSchema(`
   }
 
   # ============================================================================
-  # MongoDB Types (Flexible document data)
+  # Running Instance + Metadata Types (runninginstances, filmmetadata collections)
   # ============================================================================
 
   type RunningInstance {
@@ -162,7 +162,7 @@ const schema = buildSchema(`
   }
 
   # ============================================================================
-  # Hybrid Types (Combining PostgreSQL + MongoDB data)
+  # Composite + Statistics Types
   # ============================================================================
 
   type FilmWithScenes {
@@ -182,14 +182,6 @@ const schema = buildSchema(`
     url: String
     retrievedAt: String
     methodology: String
-  }
-
-  type User {
-    id: ID!
-    username: String!
-    email: String!
-    createdAt: String
-    lastLogin: String
   }
 
   type FilmStats {
@@ -240,10 +232,6 @@ const schema = buildSchema(`
   }
 
   type Query {
-    # ========================================================================
-    # PostgreSQL Queries (Core relational data)
-    # ========================================================================
-
     # Film queries
     films(
       filter: FilmFilterInput
@@ -262,11 +250,7 @@ const schema = buildSchema(`
     topRunningFilms(limit: Int): [Film!]!
     topCpiFilms(limit: Int): [Film!]!
 
-    # ========================================================================
-    # MongoDB Queries (Flexible document data)
-    # ========================================================================
-
-    # Running instance queries (MongoDB)
+    # Running instance queries
     runningInstances(
       filmId: Int
       intensity: String
@@ -285,15 +269,9 @@ const schema = buildSchema(`
     filmMetadata(filmId: Int!): FilmMetadata
     allFilmMetadata: [FilmMetadata!]!
 
-    # Hybrid queries (Postgres + MongoDB)
+    # Composite queries
     filmWithScenes(id: ID!): FilmWithScenes
     topFilmsByIntensity(intensity: String!, limit: Int): [Film!]!
-
-    # ========================================================================
-    # User Queries
-    # ========================================================================
-    user(id: ID!): User
-    users: [User!]!
   }
 
   type Mutation {
@@ -342,13 +320,6 @@ const schema = buildSchema(`
     ): RunningInstance!
 
     deleteRunningInstance(id: ID!): Boolean!
-
-    # User mutations (for future authentication)
-    createUser(
-      username: String!
-      email: String!
-      password: String!
-    ): User!
   }
 `);
 

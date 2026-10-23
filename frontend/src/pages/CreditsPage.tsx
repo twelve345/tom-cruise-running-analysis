@@ -223,7 +223,6 @@ export const CreditsPage: React.FC = () => {
                   <li>• Node.js</li>
                   <li>• Express</li>
                   <li>• GraphQL</li>
-                  <li>• PostgreSQL</li>
                   <li>• MongoDB</li>
                 </ul>
               </div>

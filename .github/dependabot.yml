@@ -1,0 +1,42 @@
+# Dependency updates, following the Abacus fleet pattern (abacus-fleet-control
+# conventions §16). Four surfaces: the npm workspaces (one root package-lock.json), the
+# SHA-pinned actions in .github/workflows (a stale action pin is itself a supply-chain
+# vector), and the digest-pinned base images in both Dockerfiles. Minor and patch are
+# grouped into one PR per ecosystem; majors come individually. Monthly, because this
+# project has no external users who need faster bumps.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: docker
+    directories:
+      - /frontend
+      - /backend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      docker-minor-and-patch:
+        update-types:
+          - minor
+          - patch

@@ -6,16 +6,14 @@ GraphQL API for the Tom Cruise Running Analysis platform.
 
 - **Node.js** with Express
 - **GraphQL** with graphql-http
-- **PostgreSQL** for structured data (films, running instances, users)
-- **MongoDB** for flexible data (future features like user dashboards)
+- **MongoDB** for all data (films, running instances, film metadata)
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- PostgreSQL (if running locally)
-- MongoDB (optional, if running locally)
+- Node.js 24 LTS (version pinned in the repo-root `.nvmrc`)
+- MongoDB (if running locally)
 
 ### Installation
 
@@ -31,27 +29,19 @@ npm install
 cp .env.example .env
 ```
 
-2. Update the `.env` file with your database credentials
+2. Set `MONGO_URL` in the `.env` file
 
 ### Database Setup
 
-Initialize the database tables:
-
-```bash
-npm run db:init
-```
-
-Seed with sample data:
+Load films, running instances and film metadata from the source data in `scripts/`:
 
 ```bash
 npm run db:seed
 ```
 
-Or do both at once:
-
-```bash
-npm run db:setup
-```
+The seed upserts and never deletes, so it is safe to re-run; production runs it on every boot
+(`scripts/start-railway.js`, the production image's entrypoint; `npm run start:railway` runs the
+same script locally).
 
 ### Running the Server
 
@@ -81,7 +71,7 @@ The server will start on `http://localhost:4000`
 
 - `Film` - Movie with running statistics
 - `RunningInstance` - Individual running sequence in a film
-- `User` - User account (for future features)
+- `FilmMetadata` - Trivia and running analysis for a film
 - `FilmStats` - Aggregate statistics across all films
 - `YearStats` - Statistics grouped by year
 
@@ -110,10 +100,11 @@ query {
     year
     totalRunningDistanceFeet
     runningInstances {
-      distanceFeet
-      durationSeconds
-      context
-      intensity
+      rank
+      scene {
+        context
+        intensity
+      }
     }
   }
 }
@@ -172,7 +163,10 @@ mutation {
     location: "outdoor"
   ) {
     id
-    distanceFeet
+    rank
+    measurement {
+      distanceFeet
+    }
   }
 }
 ```
@@ -182,15 +176,17 @@ mutation {
 ```
 backend/
 ├── db/
-│   ├── postgres.js      # PostgreSQL connection
 │   ├── mongodb.js       # MongoDB connection
-│   └── init.sql         # Database schema
+│   ├── sync.js          # Idempotent seed from the source data
+│   └── filmStats.js     # Derived film stats (running time, density, CPI)
 ├── graphql/
 │   ├── schema.js        # GraphQL type definitions
 │   └── resolvers.js     # GraphQL resolvers
 ├── scripts/
-│   ├── initDb.js        # Database initialization
-│   └── seedDb.js        # Sample data seeding
+│   ├── seedMongo.js     # npm run db:seed
+│   ├── enrichedMovieData.json       # Films source data
+│   ├── extracted295instances.json   # Running instances source data
+│   └── filmMetadata.json            # Film metadata source data
 ├── index.js             # Express server entry point
 ├── package.json
 └── Dockerfile
@@ -207,8 +203,8 @@ docker-compose up backend
 ## Development Notes
 
 - GraphiQL UI is enabled in development mode for easy testing
-- PostgreSQL triggers automatically update film statistics when running instances are added/modified
-- CPI (Cruise Performance Index) is calculated automatically based on the formula:
+- Film running time, running density and CPI are derived when a film is seeded, created or updated (`db/filmStats.js`)
+- CPI (Cruise Performance Index) is calculated with the formula:
   ```
   CPI = (Distance / Runtime) * (RT Score / 100)
   ```

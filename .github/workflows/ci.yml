@@ -6,19 +6,24 @@ on:
   push:
     branches: [main, dev]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test & Build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The Node version lives in .nvmrc (one pin for CI, Docker and local dev).
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
 
       - name: Install dependencies
@@ -31,10 +36,12 @@ jobs:
           echo "→ Linting frontend..."
           npm run lint --workspace=frontend -- --max-warnings=0
 
+      # frontend/tsconfig.json is a solution file ("files": [] plus references), so a plain
+      # `tsc --noEmit` checks nothing; `tsc -b` builds the referenced projects.
       - name: TypeScript type check
         run: |
           echo "→ Running TypeScript type check..."
-          cd frontend && npx tsc --noEmit
+          cd frontend && npx tsc -b
 
       - name: Run backend tests
         run: |
@@ -66,3 +73,73 @@ jobs:
           echo "✓ Tests passed"
           echo "✓ Build passed"
           echo "✓ No secrets detected"
+
+  # Builds both production images exactly as Railway does (repository root as context, the
+  # root lockfile, no legacy peer deps), smoke-tests them, and scans them. Nothing is pushed.
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mongo:
+        image: mongo:5.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build frontend image
+        run: >-
+          docker build -f frontend/Dockerfile --target production
+          --build-arg VITE_API_URL=http://localhost:4000/graphql
+          -t tomcruise-frontend:ci .
+
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile --target production -t tomcruise-backend:ci .
+
+      - name: Smoke-test frontend (unprivileged nginx on :8080)
+        run: |
+          docker run -d --name frontend -p 8080:8080 tomcruise-frontend:ci
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8080/ -o index.html && break
+            sleep 1
+          done
+          grep -q '<div id="root">' index.html
+          # Client-side routes fall back to the app shell.
+          curl -fsS http://localhost:8080/some/client/route | grep -q '<div id="root">'
+
+      - name: Smoke-test backend (distroless; seeds Mongo, then serves)
+        run: |
+          docker run -d --name backend --network host \
+            -e MONGO_URL=mongodb://localhost:27017/tomcruise -e PORT=4000 \
+            tomcruise-backend:ci
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:4000/health -o health.json && grep -q '"healthy"' health.json && break
+            sleep 1
+          done
+          cat health.json
+          grep -q '"status":"healthy"' health.json
+
+      - name: Container logs
+        if: always()
+        run: |
+          docker logs frontend || true
+          docker logs backend || true
+
+      - name: Set up Trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.72.0
+          cache: true
+
+      # HIGH/CRITICAL findings fail the job, fixed or not (the fleet's zero-exception
+      # posture). Both scans run so one failure doesn't hide the other.
+      - name: Scan frontend image
+        run: trivy image --exit-code 1 --severity HIGH,CRITICAL --no-progress tomcruise-frontend:ci
+
+      - name: Scan backend image
+        if: success() || failure()
+        run: trivy image --exit-code 1 --severity HIGH,CRITICAL --no-progress tomcruise-backend:ci
