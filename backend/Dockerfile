@@ -35,7 +35,7 @@ RUN npm ci --omit=dev --ignore-scripts --workspace=backend
 COPY backend ./backend
 
 # --------------------------------------------------------------------------- production
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:78f07ef1b5ea71ad7c055df15d0dd8997f2d288f9158623c4d4ae3d765b7d50d AS production
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:b8cec4b2f2126ff7bd034ec9ac207ffb3272667dfdc48376e3b035d3270549ba AS production
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=dependencies --chown=nonroot:nonroot /app/node_modules ./node_modules
