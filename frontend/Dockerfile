@@ -11,7 +11,7 @@
 # §16): nginx assembled from Wolfi packages into a scratch image, unprivileged, on :8080.
 
 # --------------------------------------------------------------------------- dependencies
-FROM node:24.22-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS base
+FROM node:26.13-trixie-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/package.json
